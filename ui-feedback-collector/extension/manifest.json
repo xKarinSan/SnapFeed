@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "UI Feedback Collector Screenshot",
+  "version": "1.0.0",
+  "description": "Enables screenshot capture for UI Feedback Collector",
+  "permissions": ["activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "externally_connectable": {
+    "matches": ["http://localhost:*/*", "http://127.0.0.1:*/*"]
+  }
+}

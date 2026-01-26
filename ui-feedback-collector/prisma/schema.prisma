@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          String       @id @default(cuid())
+  name        String
+  url         String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  feedbacks   Feedback[]
+  sessions    Session[]
+  screenshots Screenshot[]
+}
+
+model Feedback {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String  // "ui" | "non-ui"
+  content   String
+  author    String  // Display name from session
+
+  // UI feedback positioning (null for non-ui type)
+  posX      Float?
+  posY      Float?
+  viewportW Int?
+  viewportH Int?
+  selector  String? // Optional CSS selector for element
+
+  createdAt DateTime @default(now())
+  resolved  Boolean  @default(false)
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  displayName String
+  socketId    String?
+  joinedAt    DateTime @default(now())
+  lastSeen    DateTime @default(now())
+}
+
+model Screenshot {
+  id          String       @id @default(cuid())
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sessionId   String
+  filename    String       @unique
+  pageUrl     String
+  pageTitle   String?
+  createdAt   DateTime     @default(now())
+  annotations Annotation[]
+}
+
+model Annotation {
+  id           String     @id @default(cuid())
+  screenshotId String
+  screenshot   Screenshot @relation(fields: [screenshotId], references: [id], onDelete: Cascade)
+  content      String
+  author       String
+  posX         Float
+  posY         Float
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
