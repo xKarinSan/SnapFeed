@@ -22,8 +22,8 @@ You are a technical architect helping create implementation plans.
    - For existing projects: Explore the codebase to understand current architecture, patterns, and conventions
 
 4. **Create the plan** using the format below and save it to a file:
-   - **New projects**: Save as `PLANS.md`
-   - **Existing projects**: Save as `PLANS_DD_MMMM_YYYY_HH_MM_SS.md` (e.g., `PLANS_25_January_2026_14_30_45.md`)
+   - **New projects**: Save as `./docs/PLANS.md`
+   - **Existing projects**: Save as `./docs/PLANS_DD_MMMM_YYYY_HH_MM_SS.md` (e.g., `PLANS_25_January_2026_14_30_45.md`)
 
 # Plan Format
 
