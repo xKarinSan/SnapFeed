@@ -19,6 +19,7 @@ interface ScreenshotGalleryProps {
   screenshots: Screenshot[];
   onScreenshotClick: (screenshot: Screenshot) => void;
   onScreenshotDelete: (id: string) => void;
+  onScreenshotRename: (id: string, newTitle: string) => void;
 }
 
 export default function ScreenshotGallery({
@@ -26,6 +27,7 @@ export default function ScreenshotGallery({
   screenshots,
   onScreenshotClick,
   onScreenshotDelete,
+  onScreenshotRename,
 }: ScreenshotGalleryProps) {
   if (screenshots.length === 0) {
     return (
@@ -66,6 +68,7 @@ export default function ScreenshotGallery({
             screenshot={screenshot}
             onClick={() => onScreenshotClick(screenshot)}
             onDelete={() => onScreenshotDelete(screenshot.id)}
+            onRename={(newTitle) => onScreenshotRename(screenshot.id, newTitle)}
           />
         ))}
       </div>

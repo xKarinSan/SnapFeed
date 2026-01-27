@@ -48,6 +48,13 @@ export async function deleteScreenshot(id: string) {
   });
 }
 
+export async function updateScreenshot(id: string, data: { pageTitle?: string }) {
+  return prisma.screenshot.update({
+    where: { id },
+    data,
+  });
+}
+
 export async function getScreenshotByFilename(filename: string) {
   return prisma.screenshot.findUnique({
     where: { filename },

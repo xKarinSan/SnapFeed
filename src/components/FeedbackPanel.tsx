@@ -15,7 +15,6 @@ export default function FeedbackPanel({
     feedbacks,
     selectedFeedbackId,
     setSelectedFeedbackId,
-    isAddingFeedback,
     setIsAddingFeedback,
   } = useStore();
 
@@ -109,25 +108,14 @@ export default function FeedbackPanel({
       </div>
 
       {/* Action buttons */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex gap-2">
-        <button
-          onClick={() => setIsAddingFeedback(true)}
-          disabled={isAddingFeedback}
-          className={`flex-1 px-3 py-2 text-sm rounded-md transition-colors ${
-            isAddingFeedback
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-          }`}
-        >
-          + UI Pin
-        </button>
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => {
             setIsAddingFeedback(false);
             const event = new CustomEvent("openGeneralFeedback");
             window.dispatchEvent(event);
           }}
-          className="flex-1 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         >
           + General
         </button>

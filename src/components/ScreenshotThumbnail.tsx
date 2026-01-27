@@ -7,15 +7,19 @@ interface ScreenshotThumbnailProps {
   screenshot: Screenshot;
   onClick: () => void;
   onDelete: () => void;
+  onRename: (newTitle: string) => void;
 }
 
 export default function ScreenshotThumbnail({
   screenshot,
   onClick,
   onDelete,
+  onRename,
 }: ScreenshotThumbnailProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(screenshot.pageTitle || "");
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -36,13 +40,15 @@ export default function ScreenshotThumbnail({
 
   return (
     <div
-      className="relative group cursor-pointer rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow"
-      onClick={onClick}
+      className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-lg transition-shadow"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Thumbnail */}
-      <div className="aspect-video bg-gray-100 dark:bg-gray-900">
+      {/* Thumbnail - clickable to open viewer */}
+      <div
+        className="aspect-video bg-gray-100 dark:bg-gray-900 cursor-pointer"
+        onClick={onClick}
+      >
         {imageError ? (
           <div className="w-full h-full flex items-center justify-center text-gray-400">
             <svg
@@ -70,9 +76,11 @@ export default function ScreenshotThumbnail({
         )}
       </div>
 
-      {/* Overlay on hover */}
-      {isHovered && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+      {/* Overlay on hover - only on thumbnail */}
+      {isHovered && !isEditing && (
+        <div
+          className="absolute top-0 left-0 right-0 aspect-video bg-black/50 flex items-center justify-center pointer-events-none"
+        >
           <span className="text-white text-sm font-medium">View & Annotate</span>
         </div>
       )}
@@ -106,12 +114,59 @@ export default function ScreenshotThumbnail({
         </div>
       )}
 
-      {/* Info */}
+      {/* Info - clickable to edit */}
       <div className="p-2">
-        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-          {screenshot.pageTitle || screenshot.pageUrl}
-        </p>
-        <p className="text-xs text-gray-400 dark:text-gray-500">
+        {isEditing ? (
+          <div>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  onRename(editTitle);
+                  setIsEditing(false);
+                } else if (e.key === "Escape") {
+                  setEditTitle(screenshot.pageTitle || "");
+                  setIsEditing(false);
+                }
+              }}
+            />
+            <div className="flex gap-1 mt-1">
+              <button
+                onClick={() => {
+                  onRename(editTitle);
+                  setIsEditing(false);
+                }}
+                className="text-xs px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  setEditTitle(screenshot.pageTitle || "");
+                  setIsEditing(false);
+                }}
+                className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded -mx-1 px-1 py-0.5 transition-colors"
+            onClick={() => setIsEditing(true)}
+            title="Click to rename"
+          >
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {screenshot.pageTitle || screenshot.pageUrl}
+            </p>
+          </div>
+        )}
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
           {formatDate(screenshot.createdAt)}
         </p>
       </div>

@@ -122,6 +122,23 @@ export default function ProjectPage() {
     }
   };
 
+  const handleScreenshotRename = async (id: string, newTitle: string) => {
+    try {
+      const response = await fetch(`/api/screenshots/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageTitle: newTitle }),
+      });
+      if (response.ok) {
+        setScreenshots(prev => prev.map(s =>
+          s.id === id ? { ...s, pageTitle: newTitle } : s
+        ));
+      }
+    } catch (error) {
+      console.error("Failed to rename screenshot:", error);
+    }
+  };
+
   const handlePinClick = useCallback(
     (position: { x: number; y: number }) => {
       setPendingPinPosition(position);
@@ -343,6 +360,7 @@ export default function ProjectPage() {
               screenshots={screenshots}
               onScreenshotClick={setSelectedScreenshot}
               onScreenshotDelete={handleScreenshotDelete}
+              onScreenshotRename={handleScreenshotRename}
             />
           )}
         </div>
