@@ -28,6 +28,11 @@ const isChromeExtensionAvailable = () => {
   );
 };
 
+// Check if running in Electron
+const isElectronAvailable = () => {
+  return typeof window !== "undefined" && window.electronAPI?.isElectron;
+};
+
 export default function MiniBrowser({
   projectId,
   initialUrl = "",
@@ -90,6 +95,27 @@ export default function MiniBrowser({
   const handleReload = () => {
     if (iframeRef.current && url) {
       iframeRef.current.src = url;
+    }
+  };
+
+  // Capture using Electron's webContents.capturePage
+  const captureViaElectron = async (rect: DOMRect): Promise<string | null> => {
+    if (!isElectronAvailable() || !window.electronAPI?.captureScreen) {
+      return null;
+    }
+
+    try {
+      // capturePage expects CSS pixels, not physical pixels
+      const dataUrl = await window.electronAPI.captureScreen({
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      });
+      return dataUrl;
+    } catch (error) {
+      console.error("Electron capture failed:", error);
+      return null;
     }
   };
 
@@ -186,8 +212,12 @@ export default function MiniBrowser({
       const rect = viewportRef.current.getBoundingClientRect();
       let dataUrl: string | null = null;
 
-      // Try extension first (no dialog), fallback to Screen Capture API
-      if (extensionAvailable) {
+      // Try Electron first, then extension, then Screen Capture API
+      if (isElectronAvailable()) {
+        dataUrl = await captureViaElectron(rect);
+      }
+
+      if (!dataUrl && extensionAvailable) {
         dataUrl = await captureViaExtension(rect);
       }
 
@@ -263,7 +293,7 @@ export default function MiniBrowser({
           disabled={!url || isCapturing}
           className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           title={
-            extensionAvailable
+            isElectronAvailable() || extensionAvailable
               ? "Take screenshot"
               : "Take screenshot (will show share dialog)"
           }

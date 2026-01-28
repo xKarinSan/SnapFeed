@@ -1,12 +1,16 @@
 {
-  "name": "ui-feedback-collector",
+  "name": "snapfeed",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "npm run build && electron-builder",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "5.22",
@@ -30,10 +34,80 @@
     "@types/sharp": "^0.31.1",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.0.1",
+    "concurrently": "^9.2.1",
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0",
     "eslint": "^8",
     "eslint-config-next": "14.0.4",
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.snapfeed.app",
+    "productName": "SnapFeed",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*.cjs",
+      "!electron/**/*.ts",
+      "!electron/tsconfig.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "standalone",
+        "filter": ["**/*"]
+      },
+      {
+        "from": ".next/static",
+        "to": "standalone/.next/static",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "public",
+        "to": "standalone/public",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "prisma",
+        "to": "prisma",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/prisma",
+        "to": "node_modules/prisma",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/.prisma",
+        "to": "node_modules/.prisma",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/@prisma/client",
+        "to": "node_modules/@prisma/client",
+        "filter": ["**/*"]
+      }
+    ],
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.developer-tools",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

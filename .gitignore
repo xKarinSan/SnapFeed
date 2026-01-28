@@ -45,3 +45,12 @@ prisma/dev.db-journal
 /uploads
 
 .env
+
+# Electron
+electron/*.js
+dist-electron/
+*.dmg
+*.exe
+*.AppImage
+*.deb
+*.snap
