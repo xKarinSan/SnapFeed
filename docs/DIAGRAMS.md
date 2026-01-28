@@ -208,9 +208,13 @@ flowchart TB
     end
 
     subgraph External["External Services"]
-        puppeteer["Puppeteer<br/>Headless Chrome"]
         sqlite["SQLite<br/>Database file"]
         filesystem["Filesystem<br/>/uploads/screenshots"]
+    end
+
+    subgraph ExportLib["Export Libraries"]
+        sharp["Sharp<br/>Image annotation"]
+        pdflib["pdf-lib<br/>PDF generation"]
     end
 
     httpserver --> nexthandler
@@ -222,9 +226,10 @@ flowchart TB
     FeedbackAPI --> feedbackdb
     ScreenshotsAPI --> screenshotsdb
     ScreenshotsAPI --> annotationsdb
-    ScreenshotsAPI --> puppeteer
     ExportAPI --> projectsdb
-    ExportAPI --> feedbackdb
+    ExportAPI --> screenshotsdb
+    ExportAPI --> sharp
+    ExportAPI --> pdflib
     UploadsAPI --> filesystem
 
     projectsdb --> prisma
@@ -233,19 +238,21 @@ flowchart TB
     annotationsdb --> prisma
 
     prisma --> sqlite
-    puppeteer --> filesystem
+    sharp --> filesystem
 ```
 
 ### Legend
 - **Custom Server**: Node.js HTTP server with Next.js and Socket.io integration
 - **API Routes**: RESTful endpoints following Next.js App Router conventions
 - **Database Layer**: Prisma-based data access functions
-- **External Services**: SQLite database, filesystem, and Puppeteer
+- **External Services**: SQLite database and filesystem storage
+- **Export Libraries**: Sharp for image annotation, pdf-lib for PDF generation
 
 ### Assumptions
 - Single Prisma client instance (singleton pattern)
 - API routes handle validation and error responses
 - Screenshot files are stored locally (not cloud storage)
+- PDF export uses embedded fonts (no external font files)
 
 ---
 
@@ -328,7 +335,7 @@ sequenceDiagram
     Ext->>Ext: captureVisibleTab()
     Ext->>Ext: Crop to iframe region
     Note over Ext: Using OffscreenCanvas
-    Ext-->>SPA: { dataUrl: "data:image/png;base64,..." }
+    Ext-->>SPA: Cropped screenshot as base64 dataUrl
 
     SPA->>API: POST /api/projects/[id]/screenshots
     Note over API: { dataUrl, pageUrl, sessionId }
@@ -563,7 +570,8 @@ flowchart TB
             nextjs["Next.js App<br/>(Standalone build)"]
             socketio["Socket.io Server"]
             prisma["Prisma Client"]
-            puppeteer_lib["Puppeteer + Chromium"]
+            sharp["Sharp<br/>Image Processing"]
+            pdflib["pdf-lib<br/>PDF Export"]
         end
 
         subgraph Volume["Docker Volume: feedback-data"]
@@ -574,9 +582,10 @@ flowchart TB
         node --> nextjs
         node --> socketio
         nextjs --> prisma
+        nextjs --> sharp
+        nextjs --> pdflib
         prisma --> sqlite
-        nextjs --> puppeteer_lib
-        puppeteer_lib --> uploads
+        sharp --> uploads
     end
 
     subgraph External["External"]
@@ -585,7 +594,7 @@ flowchart TB
     end
 
     browser -->|"Port 3000<br/>HTTP/WebSocket"| Container
-    puppeteer_lib -->|"HTTPS"| target
+    browser -->|"Embeds in iframe"| target
 ```
 
 ### Legend
@@ -593,12 +602,14 @@ flowchart TB
 - **feedback-collector Container**: The application container
 - **Docker Volume**: Persistent storage for database and screenshots
 - **External**: Users and external websites
+- **Sharp**: Image processing for annotation markers
+- **pdf-lib**: PDF generation with embedded fonts
 
 ### Assumptions
 - Single container deployment (not microservices)
 - Persistent volume ensures data survives container restarts
 - Port 3000 exposed for HTTP and WebSocket traffic
-- Puppeteer uses bundled Chromium
+- Screenshots captured via Chrome extension or Screen Capture API
 
 ---
 
@@ -664,6 +675,63 @@ flowchart TB
 
 ---
 
+## Sequence Diagram - Export Flow
+
+Shows the flow when a user exports feedback to Markdown or PDF.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant SPA as React SPA
+    participant API as Export API
+    participant DB as SQLite
+    participant FS as Filesystem
+    participant Export as Export Module
+
+    U->>SPA: Click "Export (.md)" or "Export (.pdf)"
+    SPA->>API: GET /api/projects/[id]/export?format=markdown|pdf
+
+    API->>DB: Fetch project with feedbacks
+    DB-->>API: Project data
+
+    API->>DB: Fetch screenshots with annotations
+    DB-->>API: Screenshots + annotations
+
+    loop For each screenshot
+        API->>FS: Read image file
+        FS-->>API: Image buffer
+        API->>API: Annotate image with markers (Sharp)
+        API->>API: Convert to base64
+    end
+
+    alt format = markdown
+        API->>Export: generateMarkdownExport(data)
+        Export-->>API: Markdown string
+        API-->>SPA: Content-Type: text/markdown
+    else format = pdf
+        API->>Export: generatePdfExport(data)
+        Note over Export: Uses pdf-lib with embedded fonts
+        Export-->>API: PDF buffer
+        API-->>SPA: Content-Type: application/pdf
+    end
+
+    SPA->>SPA: Create blob URL
+    SPA->>U: Download file
+```
+
+### Legend
+- **Export API**: `/api/projects/[id]/export` route
+- **Export Module**: `src/lib/export/markdown.ts` and `src/lib/export/pdf.ts`
+- **Sharp**: Image processing library for annotation markers
+
+### Assumptions
+- Screenshots are annotated with numbered markers at annotation positions
+- PDF uses pdf-lib with embedded StandardFonts (Helvetica)
+- Export is self-contained (images embedded as base64)
+
+---
+
 ## Technology Stack Summary
 
 | Layer | Technology |
@@ -673,6 +741,8 @@ flowchart TB
 | **Backend** | Node.js, Next.js API Routes |
 | **Database** | SQLite + Prisma ORM |
 | **Screenshot** | Chrome Extension (captureVisibleTab) with Screen Capture API fallback |
+| **Image Processing** | Sharp (annotation markers) |
+| **Export** | Markdown-it, pdf-lib |
 | **Deployment** | Docker + Docker Compose |
 
 ---
@@ -680,7 +750,7 @@ flowchart TB
 ## File Structure Reference
 
 ```
-ui-feedback-collector/
+SnapFeed/
 ├── extension/            # Chrome extension for screenshots
 │   ├── manifest.json     # Extension config (MV3)
 │   └── background.js     # Service worker (captureVisibleTab)
@@ -692,7 +762,10 @@ ui-feedback-collector/
 │   └── lib/
 │       ├── db/           # Prisma database functions
 │       ├── socket/       # Socket.io client/events
-│       ├── export/       # Markdown export
+│       ├── export/       # Export functionality
+│       │   ├── markdown.ts   # Markdown generation
+│       │   ├── pdf.ts        # PDF generation (pdf-lib)
+│       │   └── annotateImage.ts  # Image annotation (Sharp)
 │       └── store/        # Zustand state store
 ├── prisma/               # Database schema + migrations
 ├── uploads/              # Screenshot file storage

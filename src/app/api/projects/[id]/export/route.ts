@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getProject } from "@/lib/db/projects";
 import { getScreenshotsByProject } from "@/lib/db/screenshots";
 import { generateMarkdownExport } from "@/lib/export/markdown";
+import { generatePdfExport } from "@/lib/export/pdf";
 import { annotateImageWithMarkers } from "@/lib/export/annotateImage";
 import * as fs from "fs";
 import * as path from "path";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
+    const format = request.nextUrl.searchParams.get("format") || "markdown";
     const project = await getProject(id);
 
     if (!project) {
@@ -74,7 +76,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     // Filter out screenshots that couldn't be read
     const validScreenshots = exportScreenshots.filter((s) => s.base64Data);
 
-    const markdown = generateMarkdownExport({
+    const exportData = {
       projectName: project.name,
       url: project.url,
       feedbacks: project.feedbacks.map((f) => ({
@@ -83,13 +85,27 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         type: f.type as "ui" | "non-ui",
       })),
       screenshots: validScreenshots,
-    });
+    };
 
+    const sanitizedName = project.name.replace(/[^a-zA-Z0-9]/g, "-");
+
+    if (format === "pdf") {
+      const pdfBuffer = await generatePdfExport(exportData);
+      return new NextResponse(new Uint8Array(pdfBuffer), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${sanitizedName}-feedback.pdf"`,
+        },
+      });
+    }
+
+    const markdown = generateMarkdownExport(exportData);
     return new NextResponse(markdown, {
       status: 200,
       headers: {
         "Content-Type": "text/markdown; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${project.name.replace(/[^a-zA-Z0-9]/g, "-")}-feedback.md"`,
+        "Content-Disposition": `attachment; filename="${sanitizedName}-feedback.md"`,
       },
     });
   } catch (error) {

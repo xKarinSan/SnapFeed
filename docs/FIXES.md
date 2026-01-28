@@ -49,3 +49,38 @@ const finalCropHeight = Math.min(cropHeight, bitmap.height - finalCropY);
 2. Find "UI Feedback Collector Screenshot" extension
 3. Click "service worker" link under "Inspect views"
 4. Check Console tab for crop dimension logs
+
+## PDF Export - Font File Not Found (pdfkit)
+
+**Date:** 2026-01-28
+
+**Files:** `src/lib/export/pdf.ts`, `package.json`, `next.config.js`
+
+**Problem:**
+PDF export failed with error:
+```
+ENOENT: no such file or directory, open '.next/server/vendor-chunks/data/Helvetica.afm'
+```
+
+**Root Cause:**
+The `pdfkit` library relies on external AFM font files that get bundled incorrectly by Next.js webpack. The bundler changes the file paths, causing pdfkit to look for fonts in the wrong location (`.next/server/vendor-chunks/data/` instead of `node_modules/pdfkit/js/data/`).
+
+**Attempted Solutions That Failed:**
+1. `serverExternalPackages: ['pdfkit']` in next.config.js - did not prevent webpack bundling
+2. Manually copying font files to `.next/server/vendor-chunks/data/` - files got overwritten on rebuild
+
+**Solution:**
+Replaced `pdfkit` with `pdf-lib` which embeds fonts properly and doesn't rely on external AFM files.
+
+```bash
+npm uninstall pdfkit @types/pdfkit
+npm install pdf-lib
+```
+
+**Key Differences (pdfkit vs pdf-lib):**
+| Feature | pdfkit | pdf-lib |
+|---------|--------|---------|
+| Font handling | External AFM files | Embedded StandardFonts |
+| Next.js compatibility | Requires workarounds | Works out of the box |
+| API style | Streaming/chainable | Promise-based |
+| Bundle size | Smaller (fonts external) | Larger (fonts embedded) |
