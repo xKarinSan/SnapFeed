@@ -24,21 +24,10 @@ export interface Project {
   feedbacks?: Feedback[];
   _count?: {
     feedbacks: number;
-    sessions?: number;
   };
 }
 
-export interface Session {
-  id: string;
-  displayName: string;
-  projectId?: string;
-}
-
 interface AppState {
-  // Session
-  session: Session | null;
-  setSession: (session: Session | null) => void;
-
   // Projects
   projects: Project[];
   setProjects: (projects: Project[]) => void;
@@ -63,19 +52,9 @@ interface AppState {
   setIsAddingFeedback: (value: boolean) => void;
   pendingPinPosition: { x: number; y: number } | null;
   setPendingPinPosition: (position: { x: number; y: number } | null) => void;
-
-  // Participants
-  participants: { id: string; displayName: string }[];
-  setParticipants: (participants: { id: string; displayName: string }[]) => void;
-  addParticipant: (participant: { id: string; displayName: string }) => void;
-  removeParticipant: (id: string) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
-  // Session
-  session: null,
-  setSession: (session) => set({ session }),
-
   // Projects
   projects: [],
   setProjects: (projects) => set({ projects }),
@@ -109,16 +88,4 @@ export const useStore = create<AppState>((set) => ({
   setIsAddingFeedback: (value) => set({ isAddingFeedback: value }),
   pendingPinPosition: null,
   setPendingPinPosition: (position) => set({ pendingPinPosition: position }),
-
-  // Participants
-  participants: [],
-  setParticipants: (participants) => set({ participants }),
-  addParticipant: (participant) =>
-    set((state) => ({
-      participants: [...state.participants, participant],
-    })),
-  removeParticipant: (id) =>
-    set((state) => ({
-      participants: state.participants.filter((p) => p.id !== id),
-    })),
 }));

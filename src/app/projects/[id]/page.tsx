@@ -7,7 +7,6 @@ import { useStore, Project, Feedback } from "@/lib/store/useStore";
 import MiniBrowser from "@/components/MiniBrowser";
 import FeedbackPanel from "@/components/FeedbackPanel";
 import FeedbackForm from "@/components/FeedbackForm";
-import JoinSession from "@/components/JoinSession";
 import ScreenshotGallery, { Screenshot } from "@/components/ScreenshotGallery";
 import ScreenshotViewer from "@/components/ScreenshotViewer";
 
@@ -26,7 +25,6 @@ export default function ProjectPage() {
     addFeedback,
     updateFeedback,
     removeFeedback,
-    session,
     pendingPinPosition,
     setPendingPinPosition,
     setIsAddingFeedback,
@@ -35,7 +33,6 @@ export default function ProjectPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [isGeneralFeedback, setIsGeneralFeedback] = useState(false);
-  const [hasJoined, setHasJoined] = useState(false);
 
   // Screenshot state
   const [viewMode, setViewMode] = useState<ViewMode>("browser");
@@ -157,14 +154,12 @@ export default function ProjectPage() {
     viewportW?: number;
     viewportH?: number;
   }) => {
-    if (!session) return;
-
     const response = await fetch(`/api/projects/${projectId}/feedback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...data,
-        author: session.displayName,
+        author: "User",
       }),
     });
 
@@ -234,10 +229,6 @@ export default function ProjectPage() {
       console.error("Failed to export:", error);
     }
   };
-
-  const handleJoin = useCallback(() => {
-    setHasJoined(true);
-  }, []);
 
   if (isLoading) {
     return (
@@ -316,11 +307,6 @@ export default function ProjectPage() {
               </button>
             </div>
 
-            {session && (
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-                Viewing as <strong>{session.displayName}</strong>
-              </span>
-            )}
             <button
               onClick={() => handleExport("markdown")}
               className="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
@@ -408,16 +394,13 @@ export default function ProjectPage() {
       )}
 
       {/* Screenshot viewer modal */}
-      {selectedScreenshot && session && (
+      {selectedScreenshot && (
         <ScreenshotViewer
           screenshot={selectedScreenshot}
-          author={session.displayName}
+          author="User"
           onClose={() => setSelectedScreenshot(null)}
         />
       )}
-
-      {/* Join session modal */}
-      {!hasJoined && <JoinSession projectId={projectId} onJoin={handleJoin} />}
     </div>
   );
 }

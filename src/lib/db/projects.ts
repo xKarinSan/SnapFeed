@@ -19,7 +19,7 @@ export async function getProject(id: string) {
         orderBy: { createdAt: "desc" },
       },
       _count: {
-        select: { feedbacks: true, sessions: true },
+        select: { feedbacks: true },
       },
     },
   });

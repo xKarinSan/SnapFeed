@@ -1,43 +1,40 @@
 # UI Feedback Collector - Architecture Diagrams
 
-This document contains architecture diagrams for the UI Feedback Collector application, a real-time collaborative tool for gathering UI feedback during meetings.
+This document contains architecture diagrams for the UI Feedback Collector application, a single-user tool for gathering UI feedback on web applications.
 
 ---
 
 ## System Context
 
-High-level view showing the system and its interactions with users and external systems.
+High-level view showing the system and its interactions with the user and external systems.
 
 ```mermaid
 C4Context
     title System Context Diagram - UI Feedback Collector
 
-    Person(reviewer, "Reviewer", "Team member collecting or reviewing UI feedback")
-    Person(facilitator, "Facilitator", "Meeting host managing feedback sessions")
+    Person(user, "User", "Collects UI feedback, captures screenshots, and exports reports")
 
-    System(ufc, "UI Feedback Collector", "Real-time collaborative feedback collection tool for web UI review")
+    System(ufc, "UI Feedback Collector", "Single-user feedback collection tool for web UI review")
     System(extension, "Chrome Extension", "Browser extension for seamless screenshot capture")
 
     System_Ext(target_site, "Target Website", "External website being reviewed for UI feedback")
 
-    Rel(reviewer, ufc, "Views UI, submits feedback, annotates screenshots", "HTTPS/WebSocket")
-    Rel(facilitator, ufc, "Creates projects, manages sessions, exports reports", "HTTPS/WebSocket")
+    Rel(user, ufc, "Views UI, submits feedback, annotates screenshots", "HTTPS")
     Rel(ufc, extension, "Requests screenshots", "chrome.runtime")
     Rel(extension, target_site, "Captures visible tab content", "Browser API")
 ```
 
 ### Legend
-- **Reviewer**: Any team member participating in the feedback session
-- **Facilitator**: The person who creates projects and manages the feedback collection
-- **UI Feedback Collector**: The main application
+- **User**: The person collecting feedback on a website
+- **UI Feedback Collector**: The main Next.js application
 - **Chrome Extension**: Optional extension for seamless screenshot capture
 - **Target Website**: The external website being reviewed
 
 ### Assumptions
-- Multiple users can participate in the same feedback session simultaneously
+- Single-user application (no real-time collaboration)
 - Target website is embedded in an iframe within the app
 - Chrome extension enables instant screenshots; falls back to Screen Capture API
-- Users access the system through Chrome browser (for extension features)
+- User accesses the system through Chrome browser (for extension features)
 
 ---
 
@@ -49,13 +46,12 @@ Shows the major technical building blocks and how they interact.
 C4Container
     title Container Diagram - UI Feedback Collector
 
-    Person(user, "User", "Reviewer or Facilitator")
+    Person(user, "User")
 
     Container_Boundary(app, "UI Feedback Collector") {
         Container(spa, "React SPA", "Next.js/React", "Single-page application providing the feedback collection UI")
-        Container(server, "Node.js Server", "Next.js + Socket.io", "Handles HTTP requests and WebSocket connections")
         Container(api, "REST API", "Next.js API Routes", "Provides CRUD operations for projects, feedback, screenshots")
-        ContainerDb(db, "SQLite Database", "Prisma ORM", "Stores projects, feedback, sessions, screenshots, annotations")
+        ContainerDb(db, "SQLite Database", "Prisma ORM", "Stores projects, feedback, screenshots, annotations")
         Container(fs, "File Storage", "Local filesystem", "Stores captured screenshot images")
     }
 
@@ -66,10 +62,8 @@ C4Container
     System_Ext(target, "Target Website", "Website being reviewed (embedded in iframe)")
 
     Rel(user, spa, "Uses", "HTTPS")
-    Rel(user, server, "Real-time events", "WebSocket")
     Rel(spa, api, "API calls", "HTTP/JSON")
     Rel(spa, extension, "Screenshot request", "chrome.runtime.sendMessage")
-    Rel(server, api, "Routes requests", "Internal")
     Rel(api, db, "Reads/writes", "Prisma")
     Rel(api, fs, "Stores screenshots", "File I/O")
     Rel(extension, spa, "Returns cropped screenshot", "dataUrl")
@@ -78,15 +72,14 @@ C4Container
 
 ### Legend
 - **React SPA**: Client-side application built with Next.js and React
-- **Node.js Server**: Custom HTTP server wrapping Next.js with Socket.io
 - **REST API**: Next.js API routes for data operations
 - **SQLite Database**: File-based database using Prisma ORM
 - **File Storage**: Local directory for screenshot PNG files
 - **Chrome Extension**: Browser extension for seamless screenshot capture
 
 ### Assumptions
-- Single-server deployment (not distributed)
-- SQLite is sufficient for expected data volume
+- Single-server deployment using standard Next.js server
+- SQLite is sufficient for single-user data volume
 - Chrome extension is optional (fallback to Screen Capture API)
 
 ---
@@ -108,22 +101,19 @@ flowchart TB
         feedbackform["FeedbackForm<br/>Submit feedback modal"]
         feedbackcanvas["FeedbackCanvas<br/>Pin overlay layer"]
         feedbackpin["FeedbackPin<br/>Visual marker"]
-        screenshotgallery["ScreenshotGallery<br/>Screenshot list"]
+        screenshotgallery["ScreenshotGallery<br/>Screenshot grid"]
         screenshotviewer["ScreenshotViewer<br/>View + annotate"]
+        screenshotthumbnail["ScreenshotThumbnail<br/>Screenshot card"]
         annotationcanvas["AnnotationCanvas<br/>Annotation overlay"]
         annotationpin["AnnotationPin<br/>Annotation marker"]
-        joinsession["JoinSession<br/>User name modal"]
+        annotationform["AnnotationForm<br/>Annotation input"]
+        annotationlist["AnnotationList<br/>Annotation sidebar"]
         projectcard["ProjectCard<br/>Project list item"]
         createmodal["CreateProjectModal<br/>New project form"]
     end
 
     subgraph State["State Management"]
         zustand["Zustand Store<br/>Global client state"]
-        socketclient["Socket.io Client<br/>Real-time connection"]
-    end
-
-    subgraph Hooks["Custom Hooks"]
-        userealtimefeedback["useRealtimeFeedback<br/>Socket event handler"]
     end
 
     dashboard --> projectcard
@@ -132,19 +122,17 @@ flowchart TB
     project --> feedbackpanel
     project --> feedbackcanvas
     project --> screenshotgallery
-    project --> joinsession
+    project --> feedbackform
 
     feedbackpanel --> feedbackpin
     feedbackcanvas --> feedbackpin
-    feedbackpanel --> feedbackform
 
-    screenshotgallery --> screenshotviewer
+    screenshotgallery --> screenshotthumbnail
+    screenshotthumbnail --> screenshotviewer
     screenshotviewer --> annotationcanvas
+    screenshotviewer --> annotationlist
+    screenshotviewer --> annotationform
     annotationcanvas --> annotationpin
-
-    project --> userealtimefeedback
-    userealtimefeedback --> socketclient
-    userealtimefeedback --> zustand
 
     minibrowser --> zustand
     feedbackpanel --> zustand
@@ -154,13 +142,12 @@ flowchart TB
 ### Legend
 - **Pages**: Next.js App Router page components
 - **UI Components**: React components for UI rendering
-- **State Management**: Client-side state (Zustand) and real-time communication (Socket.io)
-- **Custom Hooks**: React hooks for business logic
+- **State Management**: Zustand for client-side state
 
 ### Assumptions
 - Zustand store is the single source of truth for client state
-- Socket.io handles all real-time synchronization
 - Components follow a hierarchical composition pattern
+- Author is fixed as "User" for all feedback and annotations
 
 ---
 
@@ -170,10 +157,8 @@ Shows the server-side components and data access layer.
 
 ```mermaid
 flowchart TB
-    subgraph Server["Custom Server (server.ts)"]
-        httpserver["HTTP Server<br/>Node.js http module"]
+    subgraph NextServer["Next.js Server"]
         nexthandler["Next.js Handler<br/>SSR + API routing"]
-        socketio["Socket.io Server<br/>WebSocket handling"]
     end
 
     subgraph API["API Routes (/api)"]
@@ -187,7 +172,7 @@ flowchart TB
         end
         subgraph ScreenshotsAPI["Screenshots"]
             screenshotslist["GET/POST /projects/[id]/screenshots"]
-            screenshotsingle["GET/DELETE /screenshots/[id]"]
+            screenshotsingle["GET/PATCH/DELETE /screenshots/[id]"]
             annotationslist["GET/POST /screenshots/[id]/annotations"]
             annotationsingle["PATCH/DELETE /screenshots/[id]/annotations/[annotationId]"]
         end
@@ -195,7 +180,7 @@ flowchart TB
             exportmd["GET /projects/[id]/export"]
         end
         subgraph UploadsAPI["Static Files"]
-            uploadsserve["GET /uploads/screenshots/[...path]"]
+            uploadsserve["GET /uploads/screenshots/[filename]"]
         end
     end
 
@@ -216,9 +201,6 @@ flowchart TB
         sharp["Sharp<br/>Image annotation"]
         pdflib["pdf-lib<br/>PDF generation"]
     end
-
-    httpserver --> nexthandler
-    httpserver --> socketio
 
     nexthandler --> API
 
@@ -242,7 +224,7 @@ flowchart TB
 ```
 
 ### Legend
-- **Custom Server**: Node.js HTTP server with Next.js and Socket.io integration
+- **Next.js Server**: Standard Next.js development/production server
 - **API Routes**: RESTful endpoints following Next.js App Router conventions
 - **Database Layer**: Prisma-based data access functions
 - **External Services**: SQLite database and filesystem storage
@@ -266,11 +248,8 @@ sequenceDiagram
     participant U as User Browser
     participant SPA as React SPA
     participant Store as Zustand Store
-    participant WS as Socket.io Client
     participant API as REST API
     participant DB as SQLite
-    participant Server as Socket.io Server
-    participant Other as Other Users
 
     U->>SPA: Click on UI element
     SPA->>SPA: Capture position (x, y, viewport)
@@ -279,6 +258,7 @@ sequenceDiagram
     U->>SPA: Submit feedback
 
     SPA->>API: POST /api/projects/[id]/feedback
+    Note over API: { type, content, author: "User", posX, posY, ... }
     API->>DB: Insert feedback record
     DB-->>API: Return new feedback
     API-->>SPA: 201 Created (feedback data)
@@ -286,26 +266,19 @@ sequenceDiagram
     SPA->>Store: Add feedback to local state
     Store-->>SPA: State updated
     SPA->>SPA: Render FeedbackPin
-
-    SPA->>WS: Emit "feedback:created" event
-    WS->>Server: WebSocket message
-    Server->>Other: Broadcast to room
-    Other->>Other: Update Zustand store
-    Other->>Other: Render new FeedbackPin
 ```
 
 ### Legend
 - **User Browser**: The user's web browser
 - **React SPA**: The frontend application
 - **Zustand Store**: Client-side state management
-- **Socket.io Client/Server**: Real-time communication layer
 - **REST API**: Backend API endpoints
 - **SQLite**: Database storage
 
 ### Assumptions
-- Feedback is persisted before broadcasting
-- All users in the same project room receive updates
-- Optimistic UI updates are applied locally first
+- Feedback is persisted to database before updating UI
+- Author is always "User" (single-user mode)
+- Position data is stored as percentages for viewport independence
 
 ---
 
@@ -338,7 +311,7 @@ sequenceDiagram
     Ext-->>SPA: Cropped screenshot as base64 dataUrl
 
     SPA->>API: POST /api/projects/[id]/screenshots
-    Note over API: { dataUrl, pageUrl, sessionId }
+    Note over API: { dataUrl, pageUrl, sessionId: "user" }
 
     API->>API: Decode base64 to buffer
     API->>FS: Write PNG to /uploads/screenshots/
@@ -397,7 +370,7 @@ sequenceDiagram
     SPA->>SPA: canvas.toDataURL()
 
     SPA->>API: POST /api/projects/[id]/screenshots
-    Note over API: { dataUrl, pageUrl, sessionId }
+    Note over API: { dataUrl, pageUrl, sessionId: "user" }
 
     API->>FS: Write PNG file
     API->>DB: Insert record
@@ -415,69 +388,6 @@ sequenceDiagram
 
 ---
 
-## Sequence Diagram - Real-time Session Sync
-
-Shows how multiple users stay synchronized in a session.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U1 as User 1 (Joins)
-    participant U2 as User 2 (Existing)
-    participant SPA1 as SPA (User 1)
-    participant SPA2 as SPA (User 2)
-    participant Server as Socket.io Server
-    participant DB as SQLite
-
-    Note over U1,DB: User 1 joins an existing session
-
-    U1->>SPA1: Open project page
-    SPA1->>SPA1: Show JoinSession modal
-    U1->>SPA1: Enter display name
-
-    SPA1->>Server: Emit "room:join"
-    Note over Server: { projectId, displayName }
-
-    Server->>DB: Create/update session record
-    Server->>Server: Add to roomParticipants Map
-    Server->>SPA1: Emit "room:joined"
-    Note over SPA1: { participants: [...] }
-
-    Server->>SPA2: Emit "participant:joined"
-    Note over SPA2: { displayName: "User 1" }
-
-    SPA2->>SPA2: Update participant list
-
-    Note over U1,DB: User 1 creates feedback
-
-    U1->>SPA1: Submit feedback
-    SPA1->>Server: Emit "feedback:created"
-    Server->>SPA2: Broadcast "feedback:created"
-    SPA2->>SPA2: Add to Zustand store
-    SPA2->>SPA2: Render new pin
-
-    Note over U1,DB: User 1 leaves
-
-    U1->>SPA1: Close browser/navigate away
-    SPA1->>Server: Socket disconnect
-    Server->>Server: Remove from roomParticipants
-    Server->>SPA2: Emit "participant:left"
-    SPA2->>SPA2: Update participant list
-```
-
-### Legend
-- **User 1/2**: Different users in the same session
-- **SPA**: React frontend for each user
-- **Socket.io Server**: Real-time event hub
-- **SQLite**: Session persistence
-
-### Assumptions
-- Each project has its own Socket.io "room"
-- Participants are tracked both in memory (Map) and database
-- Disconnect events trigger cleanup automatically
-
----
-
 ## Data Model (ERD)
 
 Entity-relationship diagram showing the database schema.
@@ -485,7 +395,6 @@ Entity-relationship diagram showing the database schema.
 ```mermaid
 erDiagram
     PROJECT ||--o{ FEEDBACK : contains
-    PROJECT ||--o{ SESSION : has
     PROJECT ||--o{ SCREENSHOT : contains
     SCREENSHOT ||--o{ ANNOTATION : has
 
@@ -510,15 +419,6 @@ erDiagram
         string selector "nullable"
         datetime createdAt
         boolean resolved
-    }
-
-    SESSION {
-        string id PK
-        string projectId FK
-        string displayName
-        string socketId
-        datetime joinedAt
-        datetime lastSeen
     }
 
     SCREENSHOT {
@@ -546,70 +446,71 @@ erDiagram
 ### Legend
 - **PROJECT**: Container for a feedback collection session
 - **FEEDBACK**: Individual feedback items (UI or general)
-- **SESSION**: Active user sessions per project
 - **SCREENSHOT**: Captured page screenshots
 - **ANNOTATION**: Comments on specific screenshots
 
 ### Assumptions
-- UUIDs are used for all primary keys
+- CUIDs are used for all primary keys
 - Feedback position is nullable (only set for UI feedback)
-- Sessions track active WebSocket connections
 - Cascade delete from PROJECT removes all related records
+- Author is always "User" for single-user mode
 
 ---
 
-## Deployment Diagram
+## Sequence Diagram - Export Flow
 
-Shows the Docker-based deployment topology.
+Shows the flow when a user exports feedback to Markdown or PDF.
 
 ```mermaid
-flowchart TB
-    subgraph Host["Docker Host"]
-        subgraph Container["feedback-collector Container"]
-            node["Node.js 20 Alpine"]
-            nextjs["Next.js App<br/>(Standalone build)"]
-            socketio["Socket.io Server"]
-            prisma["Prisma Client"]
-            sharp["Sharp<br/>Image Processing"]
-            pdflib["pdf-lib<br/>PDF Export"]
-        end
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant SPA as React SPA
+    participant API as Export API
+    participant DB as SQLite
+    participant FS as Filesystem
+    participant Export as Export Module
 
-        subgraph Volume["Docker Volume: feedback-data"]
-            sqlite[("SQLite DB<br/>/app/data/feedback.db")]
-            uploads["Screenshots<br/>/app/uploads/screenshots"]
-        end
+    U->>SPA: Click "Export (.md)" or "Export (.pdf)"
+    SPA->>API: GET /api/projects/[id]/export?format=markdown|pdf
 
-        node --> nextjs
-        node --> socketio
-        nextjs --> prisma
-        nextjs --> sharp
-        nextjs --> pdflib
-        prisma --> sqlite
-        sharp --> uploads
+    API->>DB: Fetch project with feedbacks
+    DB-->>API: Project data
+
+    API->>DB: Fetch screenshots with annotations
+    DB-->>API: Screenshots + annotations
+
+    loop For each screenshot
+        API->>FS: Read image file
+        FS-->>API: Image buffer
+        API->>API: Annotate image with markers (Sharp)
+        API->>API: Convert to base64
     end
 
-    subgraph External["External"]
-        browser["User Browser"]
-        target["Target Website"]
+    alt format = markdown
+        API->>Export: generateMarkdownExport(data)
+        Export-->>API: Markdown string
+        API-->>SPA: Content-Type: text/markdown
+    else format = pdf
+        API->>Export: generatePdfExport(data)
+        Note over Export: Uses pdf-lib with embedded fonts
+        Export-->>API: PDF buffer
+        API-->>SPA: Content-Type: application/pdf
     end
 
-    browser -->|"Port 3000<br/>HTTP/WebSocket"| Container
-    browser -->|"Embeds in iframe"| target
+    SPA->>SPA: Create blob URL
+    SPA->>U: Download file
 ```
 
 ### Legend
-- **Docker Host**: The machine running Docker
-- **feedback-collector Container**: The application container
-- **Docker Volume**: Persistent storage for database and screenshots
-- **External**: Users and external websites
-- **Sharp**: Image processing for annotation markers
-- **pdf-lib**: PDF generation with embedded fonts
+- **Export API**: `/api/projects/[id]/export` route
+- **Export Module**: `src/lib/export/markdown.ts` and `src/lib/export/pdf.ts`
+- **Sharp**: Image processing library for annotation markers
 
 ### Assumptions
-- Single container deployment (not microservices)
-- Persistent volume ensures data survives container restarts
-- Port 3000 exposed for HTTP and WebSocket traffic
-- Screenshots captured via Chrome extension or Screen Capture API
+- Screenshots are annotated with numbered markers at annotation positions
+- PDF uses pdf-lib with embedded StandardFonts (Helvetica)
+- Export is self-contained (images embedded as base64)
 
 ---
 
@@ -675,75 +576,16 @@ flowchart TB
 
 ---
 
-## Sequence Diagram - Export Flow
-
-Shows the flow when a user exports feedback to Markdown or PDF.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as User
-    participant SPA as React SPA
-    participant API as Export API
-    participant DB as SQLite
-    participant FS as Filesystem
-    participant Export as Export Module
-
-    U->>SPA: Click "Export (.md)" or "Export (.pdf)"
-    SPA->>API: GET /api/projects/[id]/export?format=markdown|pdf
-
-    API->>DB: Fetch project with feedbacks
-    DB-->>API: Project data
-
-    API->>DB: Fetch screenshots with annotations
-    DB-->>API: Screenshots + annotations
-
-    loop For each screenshot
-        API->>FS: Read image file
-        FS-->>API: Image buffer
-        API->>API: Annotate image with markers (Sharp)
-        API->>API: Convert to base64
-    end
-
-    alt format = markdown
-        API->>Export: generateMarkdownExport(data)
-        Export-->>API: Markdown string
-        API-->>SPA: Content-Type: text/markdown
-    else format = pdf
-        API->>Export: generatePdfExport(data)
-        Note over Export: Uses pdf-lib with embedded fonts
-        Export-->>API: PDF buffer
-        API-->>SPA: Content-Type: application/pdf
-    end
-
-    SPA->>SPA: Create blob URL
-    SPA->>U: Download file
-```
-
-### Legend
-- **Export API**: `/api/projects/[id]/export` route
-- **Export Module**: `src/lib/export/markdown.ts` and `src/lib/export/pdf.ts`
-- **Sharp**: Image processing library for annotation markers
-
-### Assumptions
-- Screenshots are annotated with numbered markers at annotation positions
-- PDF uses pdf-lib with embedded StandardFonts (Helvetica)
-- Export is self-contained (images embedded as base64)
-
----
-
 ## Technology Stack Summary
 
 | Layer | Technology |
 |-------|------------|
 | **Frontend** | Next.js 14, React 18, Tailwind CSS, Zustand |
-| **Real-time** | Socket.io (WebSocket) |
-| **Backend** | Node.js, Next.js API Routes |
+| **Backend** | Next.js API Routes |
 | **Database** | SQLite + Prisma ORM |
 | **Screenshot** | Chrome Extension (captureVisibleTab) with Screen Capture API fallback |
 | **Image Processing** | Sharp (annotation markers) |
-| **Export** | Markdown-it, pdf-lib |
-| **Deployment** | Docker + Docker Compose |
+| **Export** | pdf-lib (PDF), custom markdown generator |
 
 ---
 
@@ -756,12 +598,19 @@ SnapFeed/
 │   └── background.js     # Service worker (captureVisibleTab)
 ├── src/
 │   ├── app/              # Next.js App Router (pages + API)
+│   │   ├── api/          # REST API routes
+│   │   │   ├── projects/ # Project and feedback endpoints
+│   │   │   └── screenshots/ # Screenshot and annotation endpoints
+│   │   ├── projects/[id]/ # Project detail page
+│   │   └── page.tsx      # Dashboard
 │   ├── components/       # React UI components
-│   │   └── MiniBrowser.tsx  # Iframe + extension integration
-│   ├── hooks/            # Custom React hooks
+│   │   ├── MiniBrowser.tsx  # Iframe + extension integration
+│   │   ├── FeedbackPanel.tsx
+│   │   ├── FeedbackForm.tsx
+│   │   ├── ScreenshotGallery.tsx
+│   │   └── ScreenshotViewer.tsx
 │   └── lib/
 │       ├── db/           # Prisma database functions
-│       ├── socket/       # Socket.io client/events
 │       ├── export/       # Export functionality
 │       │   ├── markdown.ts   # Markdown generation
 │       │   ├── pdf.ts        # PDF generation (pdf-lib)
@@ -769,7 +618,5 @@ SnapFeed/
 │       └── store/        # Zustand state store
 ├── prisma/               # Database schema + migrations
 ├── uploads/              # Screenshot file storage
-├── server.ts             # Custom HTTP/Socket.io server
-├── Dockerfile            # Container build config
-└── docker-compose.yml    # Deployment config
+└── package.json          # Dependencies and scripts
 ```

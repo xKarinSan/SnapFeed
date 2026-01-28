@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, FormEvent, KeyboardEvent } from "react";
-import { useStore } from "@/lib/store/useStore";
 
 // Extension ID - update this after loading the extension in Chrome
 const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID || "";
@@ -40,7 +39,6 @@ export default function MiniBrowser({
   const [extensionAvailable, setExtensionAvailable] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const { session } = useStore();
 
   // Check if extension is available on mount
   useEffect(() => {
@@ -204,7 +202,7 @@ export default function MiniBrowser({
         body: JSON.stringify({
           dataUrl,
           pageUrl: url,
-          sessionId: session?.displayName || "anonymous",
+          sessionId: "user",
         }),
       });
 
