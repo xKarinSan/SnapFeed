@@ -59,7 +59,7 @@ export default function AnnotationList({
     return (
       <div className="p-4 text-center">
         <p className="text-gray-400 text-sm">
-          No notes yet. Click "Add Note" to annotate this screenshot.
+          No notes yet. Click &quot;Add Note&quot; to annotate this screenshot.
         </p>
       </div>
     );
