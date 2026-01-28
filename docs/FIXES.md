@@ -84,3 +84,73 @@ npm install pdf-lib
 | Next.js compatibility | Requires workarounds | Works out of the box |
 | API style | Streaming/chainable | Promise-based |
 | Bundle size | Smaller (fonts external) | Larger (fonts embedded) |
+
+## Single-User Architecture Refactor
+
+**Date:** 2026-01-29
+
+**Files:** Multiple files across `src/app/`, `src/components/`, `src/lib/store/`
+
+**Problem:**
+The application was originally built with multi-user real-time collaboration features (Socket.IO) that added unnecessary complexity for single-user workflows. This caused:
+- Extra overhead from WebSocket connections
+- Confusing session/participant management UI
+- Complex state synchronization logic
+
+**Solution:**
+Refactored to single-user architecture:
+1. Removed Socket.IO and real-time collaboration
+2. Simplified author to hardcoded "User" value
+3. Removed `FeedbackCanvas.tsx` - overlay layer for placing feedback pins (functionality consolidated)
+4. Removed `FeedbackPin.tsx` - separate pin component (consolidated into `AnnotationPin.tsx`)
+5. Removed session/participant tracking from Zustand store
+
+**Benefits:**
+- Simpler codebase with fewer moving parts
+- Faster page loads (no WebSocket handshake)
+- Clearer user experience for solo feedback collection
+
+## Screenshot Rename Functionality
+
+**Date:** 2026-01-28
+
+**Files:** `src/api/screenshots/[id]/route.ts`, `src/components/ScreenshotThumbnail.tsx`
+
+**Problem:**
+Screenshots were auto-named with timestamps and page titles, making it hard to identify specific captures when reviewing multiple screenshots.
+
+**Solution:**
+Added rename functionality:
+1. Added `PATCH /api/screenshots/[id]` endpoint to update screenshot `pageTitle`
+2. Added edit button on `ScreenshotThumbnail` component
+3. Inline rename with input field and save/cancel buttons
+
+## Export Button Separation
+
+**Date:** 2026-01-28
+
+**Files:** `src/app/projects/[id]/page.tsx`, `src/lib/export/markdown.ts`, `src/lib/export/pdf.ts`
+
+**Problem:**
+Export functionality used a single dropdown button, requiring extra clicks to select format. Users often export to the same format repeatedly.
+
+**Solution:**
+Split into two separate buttons:
+1. "Export (.md)" button for Markdown export
+2. "Export (.pdf)" button for PDF export
+3. Each button triggers direct download without intermediate selection
+
+## Screenshot Embedding in Exports
+
+**Date:** 2026-01-28
+
+**Files:** `src/lib/export/markdown.ts`, `src/lib/export/pdf.ts`, `src/lib/export/annotateImage.ts`
+
+**Problem:**
+Exported Markdown/PDF files referenced screenshots by filename, requiring users to manually include image files.
+
+**Solution:**
+1. Screenshots are now embedded as base64 data URLs in Markdown
+2. Screenshots are embedded directly in PDF using `pdf-lib`
+3. Annotation markers (numbered circles) are drawn directly on images using `sharp`
+4. Exports are now fully self-contained single files

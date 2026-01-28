@@ -1,26 +1,27 @@
-# UI Feedback Collector
+# SnapFeed
 
-A real-time collaborative tool for collecting UI feedback during meetings. Embed any website in a mini browser, capture screenshots, add annotations, and collect feedback from multiple participants simultaneously.
+A single-user UI feedback collection tool built with Next.js. Embed any website in a mini browser, capture screenshots, add annotations, and organize feedback for design reviews.
 
 ## Features
 
 - **Mini Browser**: Embed and browse any website within the app
-- **Screenshot Capture**: Capture the current state of embedded sites (with Chrome extension for seamless experience)
-- **Real-time Collaboration**: Multiple users can join the same project and see updates in real-time via WebSocket
-- **Feedback Management**: Create, edit, and organize feedback items
-- **Session Management**: Track participants and manage feedback sessions
+- **Screenshot Capture**: Capture the current state of embedded sites (with optional Chrome extension for seamless experience)
+- **Screenshot Annotations**: Add positioned annotations directly on captured screenshots
+- **Feedback Management**: Create UI feedback (with position) or general notes, mark items as resolved
+- **Export**: Export projects as Markdown or PDF with embedded annotated screenshots
 
 ## Prerequisites
 
 - Node.js 18+
 - npm or yarn
-- Chrome browser (for extension features)
+- Chrome browser (optional, for extension features)
 
 ## Installation
 
 1. **Clone and install dependencies:**
    ```bash
-   cd ui-feedback-collector
+   git clone <repository-url>
+   cd SnapFeed
    npm install
    ```
 
@@ -42,7 +43,7 @@ A real-time collaborative tool for collecting UI feedback during meetings. Embed
 
    Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Chrome Extension Setup (Recommended)
+## Chrome Extension Setup (Optional)
 
 The Chrome extension enables seamless screenshot capture without browser permission dialogs.
 
@@ -78,47 +79,48 @@ The app automatically detects if the extension is available and falls back to th
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `DATABASE_URL` | Database connection string | Yes |
+| `DATABASE_URL` | SQLite database path | Yes |
 | `NEXT_PUBLIC_EXTENSION_ID` | Chrome extension ID for screenshots | No |
 
 ## Project Structure
 
 ```
-ui-feedback-collector/
+SnapFeed/
 ├── extension/           # Chrome extension for screenshot capture
 │   ├── manifest.json
 │   └── background.js
 ├── prisma/              # Database schema
+│   └── schema.prisma
 ├── src/
-│   ├── app/             # Next.js app router pages
+│   ├── app/             # Next.js App Router
+│   │   ├── api/         # REST API endpoints
+│   │   │   └── projects/
+│   │   └── projects/    # Project detail page
 │   ├── components/      # React components
-│   │   └── MiniBrowser.tsx  # Embedded browser with screenshot
-│   ├── lib/
-│   │   ├── db/          # Database operations
-│   │   ├── socket/      # WebSocket event types
-│   │   └── store/       # Zustand state management
-│   └── ...
-├── server.ts            # Custom server with Socket.IO
+│   │   ├── MiniBrowser.tsx
+│   │   ├── FeedbackPanel.tsx
+│   │   ├── ScreenshotGallery.tsx
+│   │   └── ...
+│   └── lib/
+│       ├── db/          # Prisma database utilities
+│       ├── export/      # Markdown/PDF export
+│       └── store/       # Zustand state management
 └── uploads/             # Screenshot storage
 ```
 
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router)
-- **Database**: Prisma ORM
-- **Real-time**: Socket.IO
+- **Database**: SQLite with Prisma ORM
 - **State**: Zustand
 - **Styling**: Tailwind CSS
-- **Runtime**: TypeScript
+- **Language**: TypeScript
 
 ## Development
 
 ```bash
 # Run development server
 npm run dev
-
-# Run Next.js only (without custom server)
-npm run dev:next
 
 # Build for production
 npm run build
@@ -128,7 +130,22 @@ npm start
 
 # Lint code
 npm run lint
+
+# Reset database
+npx prisma migrate reset
+npx prisma generate
 ```
+
+## Usage
+
+1. **Create a Project**: Click "New Project" and enter a name and target URL
+2. **Browse**: Use the mini browser to navigate the target site
+3. **Capture Screenshots**: Click the camera icon to capture the current view
+4. **Add Feedback**:
+   - Click on the screenshot to add positioned UI feedback
+   - Use the feedback panel to add general notes
+5. **Annotate Screenshots**: View screenshots and add annotations at specific points
+6. **Export**: Download your feedback as Markdown or PDF
 
 ## Troubleshooting
 
@@ -142,6 +159,6 @@ npm run lint
 - Check that `externally_connectable` in `manifest.json` includes your dev server URL
 - Verify the extension ID in `.env.local` is correct
 
-### Real-time updates not working
-- Ensure the custom server is running (`npm run dev`, not `npm run dev:next`)
-- Check browser console for WebSocket connection errors
+### Database errors
+- Run `npx prisma generate` to regenerate the Prisma client
+- Run `npx prisma db push` to sync the database schema

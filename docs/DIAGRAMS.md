@@ -1,6 +1,6 @@
-# UI Feedback Collector - Architecture Diagrams
+# SnapFeed - Architecture Diagrams
 
-This document contains architecture diagrams for the UI Feedback Collector application, a single-user tool for gathering UI feedback on web applications.
+This document contains architecture diagrams for SnapFeed, a single-user tool for gathering UI feedback on web applications.
 
 ---
 
@@ -99,17 +99,15 @@ flowchart TB
         minibrowser["MiniBrowser<br/>URL viewer + screenshot"]
         feedbackpanel["FeedbackPanel<br/>Feedback list sidebar"]
         feedbackform["FeedbackForm<br/>Submit feedback modal"]
-        feedbackcanvas["FeedbackCanvas<br/>Pin overlay layer"]
-        feedbackpin["FeedbackPin<br/>Visual marker"]
         screenshotgallery["ScreenshotGallery<br/>Screenshot grid"]
         screenshotviewer["ScreenshotViewer<br/>View + annotate"]
         screenshotthumbnail["ScreenshotThumbnail<br/>Screenshot card"]
-        annotationcanvas["AnnotationCanvas<br/>Annotation overlay"]
         annotationpin["AnnotationPin<br/>Annotation marker"]
         annotationform["AnnotationForm<br/>Annotation input"]
         annotationlist["AnnotationList<br/>Annotation sidebar"]
         projectcard["ProjectCard<br/>Project list item"]
         createmodal["CreateProjectModal<br/>New project form"]
+        iframeviewer["IframeViewer<br/>Iframe content display"]
     end
 
     subgraph State["State Management"]
@@ -120,19 +118,17 @@ flowchart TB
     dashboard --> createmodal
     project --> minibrowser
     project --> feedbackpanel
-    project --> feedbackcanvas
     project --> screenshotgallery
     project --> feedbackform
 
-    feedbackpanel --> feedbackpin
-    feedbackcanvas --> feedbackpin
+    minibrowser --> iframeviewer
+    feedbackpanel --> annotationpin
 
     screenshotgallery --> screenshotthumbnail
     screenshotthumbnail --> screenshotviewer
-    screenshotviewer --> annotationcanvas
+    screenshotviewer --> annotationpin
     screenshotviewer --> annotationlist
     screenshotviewer --> annotationform
-    annotationcanvas --> annotationpin
 
     minibrowser --> zustand
     feedbackpanel --> zustand
@@ -593,30 +589,46 @@ flowchart TB
 
 ```
 SnapFeed/
-├── extension/            # Chrome extension for screenshots
-│   ├── manifest.json     # Extension config (MV3)
-│   └── background.js     # Service worker (captureVisibleTab)
+├── extension/              # Chrome extension for screenshots
+│   ├── manifest.json       # Extension config (MV3)
+│   └── background.js       # Service worker (captureVisibleTab)
 ├── src/
-│   ├── app/              # Next.js App Router (pages + API)
-│   │   ├── api/          # REST API routes
-│   │   │   ├── projects/ # Project and feedback endpoints
-│   │   │   └── screenshots/ # Screenshot and annotation endpoints
-│   │   ├── projects/[id]/ # Project detail page
-│   │   └── page.tsx      # Dashboard
-│   ├── components/       # React UI components
-│   │   ├── MiniBrowser.tsx  # Iframe + extension integration
-│   │   ├── FeedbackPanel.tsx
-│   │   ├── FeedbackForm.tsx
-│   │   ├── ScreenshotGallery.tsx
-│   │   └── ScreenshotViewer.tsx
+│   ├── app/                # Next.js App Router (pages + API)
+│   │   ├── api/            # REST API routes
+│   │   │   ├── projects/   # Project and feedback endpoints
+│   │   │   ├── screenshots/# Screenshot and annotation endpoints
+│   │   │   └── uploads/    # Static file serving
+│   │   ├── projects/[id]/  # Project detail page
+│   │   ├── layout.tsx      # Root layout
+│   │   └── page.tsx        # Dashboard
+│   ├── components/         # React UI components
+│   │   ├── MiniBrowser.tsx       # Iframe + extension integration
+│   │   ├── FeedbackPanel.tsx     # Feedback sidebar
+│   │   ├── FeedbackForm.tsx      # Feedback input modal
+│   │   ├── ScreenshotGallery.tsx # Screenshot grid
+│   │   ├── ScreenshotViewer.tsx  # Full screenshot view
+│   │   ├── ScreenshotThumbnail.tsx
+│   │   ├── AnnotationPin.tsx     # Position markers
+│   │   ├── AnnotationForm.tsx
+│   │   ├── AnnotationList.tsx
+│   │   ├── IframeViewer.tsx
+│   │   ├── ProjectCard.tsx
+│   │   └── CreateProjectModal.tsx
 │   └── lib/
-│       ├── db/           # Prisma database functions
-│       ├── export/       # Export functionality
-│       │   ├── markdown.ts   # Markdown generation
-│       │   ├── pdf.ts        # PDF generation (pdf-lib)
+│       ├── db/             # Prisma database functions
+│       │   ├── prisma.ts
+│       │   ├── projects.ts
+│       │   ├── feedback.ts
+│       │   ├── screenshots.ts
+│       │   └── annotations.ts
+│       ├── export/         # Export functionality
+│       │   ├── markdown.ts       # Markdown generation
+│       │   ├── pdf.ts            # PDF generation (pdf-lib)
 │       │   └── annotateImage.ts  # Image annotation (Sharp)
-│       └── store/        # Zustand state store
-├── prisma/               # Database schema + migrations
-├── uploads/              # Screenshot file storage
-└── package.json          # Dependencies and scripts
+│       └── store/
+│           └── useStore.ts # Zustand state store
+├── prisma/
+│   └── schema.prisma       # Database schema
+├── uploads/screenshots/    # Screenshot file storage
+└── package.json            # Dependencies and scripts
 ```

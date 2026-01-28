@@ -5,7 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'UI Feedback Collector',
+  title: 'SnapFeed',
   description: 'Collect real-time feedback on web UIs during meetings',
 }
 

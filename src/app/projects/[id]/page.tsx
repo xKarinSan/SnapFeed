@@ -20,6 +20,7 @@ export default function ProjectPage() {
   const {
     currentProject,
     setCurrentProject,
+    updateCurrentProject,
     feedbacks,
     setFeedbacks,
     addFeedback,
@@ -33,6 +34,8 @@ export default function ProjectPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [isGeneralFeedback, setIsGeneralFeedback] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
 
   // Screenshot state
   const [viewMode, setViewMode] = useState<ViewMode>("browser");
@@ -210,6 +213,27 @@ export default function ProjectPage() {
     }
   };
 
+  const handleRenameProject = async () => {
+    const trimmedName = editedName.trim();
+    if (!trimmedName || trimmedName === currentProject?.name) {
+      setIsEditingName(false);
+      return;
+    }
+    try {
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmedName }),
+      });
+      if (response.ok) {
+        updateCurrentProject({ name: trimmedName });
+      }
+    } catch (error) {
+      console.error("Failed to rename project:", error);
+    }
+    setIsEditingName(false);
+  };
+
   const handleExport = async (format: "markdown" | "pdf") => {
     try {
       const response = await fetch(`/api/projects/${projectId}/export?format=${format}`);
@@ -268,9 +292,48 @@ export default function ProjectPage() {
               </svg>
             </Link>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {currentProject.name}
-              </h1>
+              {isEditingName ? (
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  onBlur={handleRenameProject}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleRenameProject();
+                    } else if (e.key === "Escape") {
+                      setIsEditingName(false);
+                    }
+                  }}
+                  autoFocus
+                  className="text-lg font-semibold text-gray-900 dark:text-white bg-transparent border-b-2 border-blue-500 outline-none px-0 py-0"
+                />
+              ) : (
+                <button
+                  onClick={() => {
+                    setEditedName(currentProject.name);
+                    setIsEditingName(true);
+                  }}
+                  className="group flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  title="Click to rename"
+                >
+                  {currentProject.name}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    />
+                  </svg>
+                </button>
+              )}
               <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-md">
                 {currentProject.url}
               </p>

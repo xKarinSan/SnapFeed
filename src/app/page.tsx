@@ -61,7 +61,7 @@ export default function Dashboard() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              UI Feedback Collector
+              SnapFeed
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               Collect real-time feedback on web UIs during meetings

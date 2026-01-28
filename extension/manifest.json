@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "UI Feedback Collector Screenshot",
+  "name": "SnapFeed",
   "version": "1.0.0",
-  "description": "Enables screenshot capture for UI Feedback Collector",
+  "description": "Enables screenshot capture for SnapFeed",
   "permissions": ["activeTab"],
   "host_permissions": ["<all_urls>"],
   "background": {
