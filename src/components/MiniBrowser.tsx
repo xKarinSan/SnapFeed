@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, FormEvent, KeyboardEvent } from "react";
+import StatusModal from "./StatusModal";
 
 // Extension ID - update this after loading the extension in Chrome
 const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID || "";
@@ -37,6 +38,10 @@ export default function MiniBrowser({
   const [inputUrl, setInputUrl] = useState(initialUrl);
   const [isCapturing, setIsCapturing] = useState(false);
   const [extensionAvailable, setExtensionAvailable] = useState(false);
+  const [screenshotStatus, setScreenshotStatus] = useState<{
+    isOpen: boolean;
+    status: "loading" | "success" | "error";
+  }>({ isOpen: false, status: "loading" });
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
 
@@ -182,6 +187,8 @@ export default function MiniBrowser({
     if (!url || isCapturing || !viewportRef.current) return;
 
     setIsCapturing(true);
+    setScreenshotStatus({ isOpen: true, status: "loading" });
+
     try {
       const rect = viewportRef.current.getBoundingClientRect();
       let dataUrl: string | null = null;
@@ -209,13 +216,19 @@ export default function MiniBrowser({
       if (response.ok) {
         const screenshot = await response.json();
         onScreenshotCaptured?.(screenshot);
+        setScreenshotStatus({ isOpen: true, status: "success" });
       } else {
         const error = await response.json();
         console.error("Screenshot failed:", error);
+        setScreenshotStatus({ isOpen: true, status: "error" });
       }
     } catch (error) {
       if ((error as Error).name !== "NotAllowedError") {
         console.error("Screenshot failed:", error);
+        setScreenshotStatus({ isOpen: true, status: "error" });
+      } else {
+        // User cancelled - just close the modal
+        setScreenshotStatus({ isOpen: false, status: "loading" });
       }
     } finally {
       setIsCapturing(false);
@@ -346,6 +359,27 @@ export default function MiniBrowser({
           </div>
         )}
       </div>
+
+      {/* Screenshot status modal */}
+      <StatusModal
+        isOpen={screenshotStatus.isOpen}
+        status={screenshotStatus.status}
+        title={
+          screenshotStatus.status === "loading"
+            ? "Taking Screenshot..."
+            : screenshotStatus.status === "success"
+            ? "Screenshot Saved"
+            : "Screenshot Failed"
+        }
+        message={
+          screenshotStatus.status === "loading"
+            ? "Capturing the current view..."
+            : screenshotStatus.status === "success"
+            ? "Your screenshot has been saved."
+            : "An error occurred while taking the screenshot."
+        }
+        onClose={() => setScreenshotStatus({ isOpen: false, status: "loading" })}
+      />
     </div>
   );
 }

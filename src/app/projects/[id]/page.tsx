@@ -7,40 +7,42 @@ import { useStore, Project, Feedback } from "@/lib/store/useStore";
 import MiniBrowser from "@/components/MiniBrowser";
 import FeedbackPanel from "@/components/FeedbackPanel";
 import FeedbackForm from "@/components/FeedbackForm";
-import ScreenshotGallery, { Screenshot } from "@/components/ScreenshotGallery";
+import { Screenshot } from "@/components/ScreenshotGallery";
 import ScreenshotViewer from "@/components/ScreenshotViewer";
-
-type ViewMode = "browser" | "screenshots";
+import { useToast } from "@/components/Toast";
+import StatusModal from "@/components/StatusModal";
 
 export default function ProjectPage() {
   const params = useParams();
   const router = useRouter();
+  const { showToast } = useToast();
   const projectId = params.id as string;
 
   const {
     currentProject,
     setCurrentProject,
     updateCurrentProject,
-    feedbacks,
     setFeedbacks,
     addFeedback,
     updateFeedback,
     removeFeedback,
-    pendingPinPosition,
-    setPendingPinPosition,
-    setIsAddingFeedback,
   } = useStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
-  const [isGeneralFeedback, setIsGeneralFeedback] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
 
   // Screenshot state
-  const [viewMode, setViewMode] = useState<ViewMode>("browser");
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
+
+  // Export status state
+  const [exportStatus, setExportStatus] = useState<{
+    isOpen: boolean;
+    status: "loading" | "success" | "error";
+    format: "markdown" | "pdf" | null;
+  }>({ isOpen: false, status: "loading", format: null });
 
   useEffect(() => {
     fetchProject();
@@ -48,7 +50,6 @@ export default function ProjectPage() {
     fetchScreenshots();
 
     const handleGeneralFeedback = () => {
-      setIsGeneralFeedback(true);
       setShowFeedbackForm(true);
     };
 
@@ -107,7 +108,8 @@ export default function ProjectPage() {
       pageTitle: screenshot.pageTitle || null,
       _count: { annotations: 0 },
     }, ...prev]);
-  }, []);
+    showToast("Screenshot captured");
+  }, [showToast]);
 
   const handleScreenshotDelete = async (id: string) => {
     try {
@@ -139,16 +141,6 @@ export default function ProjectPage() {
     }
   };
 
-  const handlePinClick = useCallback(
-    (position: { x: number; y: number }) => {
-      setPendingPinPosition(position);
-      setIsGeneralFeedback(false);
-      setShowFeedbackForm(true);
-      setIsAddingFeedback(false);
-    },
-    [setPendingPinPosition, setIsAddingFeedback]
-  );
-
   const handleFeedbackSubmit = async (data: {
     type: "ui" | "non-ui";
     content: string;
@@ -173,27 +165,6 @@ export default function ProjectPage() {
     const newFeedback: Feedback = await response.json();
     addFeedback(newFeedback);
     setShowFeedbackForm(false);
-    setPendingPinPosition(null);
-  };
-
-  const handleToggleResolved = async (id: string) => {
-    try {
-      const response = await fetch(
-        `/api/projects/${projectId}/feedback/${id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ toggleResolved: true }),
-        }
-      );
-
-      if (response.ok) {
-        const updated: Feedback = await response.json();
-        updateFeedback(id, { resolved: updated.resolved });
-      }
-    } catch (error) {
-      console.error("Failed to toggle resolved:", error);
-    }
   };
 
   const handleDeleteFeedback = async (id: string) => {
@@ -210,6 +181,25 @@ export default function ProjectPage() {
       }
     } catch (error) {
       console.error("Failed to delete feedback:", error);
+    }
+  };
+
+  const handleEditFeedback = async (id: string, content: string) => {
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/feedback/${id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        }
+      );
+
+      if (response.ok) {
+        updateFeedback(id, { content });
+      }
+    } catch (error) {
+      console.error("Failed to edit feedback:", error);
     }
   };
 
@@ -235,6 +225,9 @@ export default function ProjectPage() {
   };
 
   const handleExport = async (format: "markdown" | "pdf") => {
+    // Show loading modal
+    setExportStatus({ isOpen: true, status: "loading", format });
+
     try {
       const response = await fetch(`/api/projects/${projectId}/export?format=${format}`);
       if (!response.ok) throw new Error("Export failed");
@@ -249,8 +242,12 @@ export default function ProjectPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+
+      // Show success modal
+      setExportStatus({ isOpen: true, status: "success", format });
     } catch (error) {
       console.error("Failed to export:", error);
+      setExportStatus({ isOpen: true, status: "error", format });
     }
   };
 
@@ -341,35 +338,6 @@ export default function ProjectPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* View mode toggle */}
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode("browser")}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                  viewMode === "browser"
-                    ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
-                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                }`}
-              >
-                Browser
-              </button>
-              <button
-                onClick={() => setViewMode("screenshots")}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5 ${
-                  viewMode === "screenshots"
-                    ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
-                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                }`}
-              >
-                Screenshots
-                {screenshots.length > 0 && (
-                  <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full">
-                    {screenshots.length}
-                  </span>
-                )}
-              </button>
-            </div>
-
             <button
               onClick={() => handleExport("markdown")}
               className="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
@@ -418,27 +386,21 @@ export default function ProjectPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Main view area */}
         <div className="flex-1 relative">
-          {viewMode === "browser" ? (
-            <MiniBrowser
-              projectId={projectId}
-              initialUrl={currentProject.url}
-              onScreenshotCaptured={handleScreenshotCaptured}
-            />
-          ) : (
-            <ScreenshotGallery
-              projectId={projectId}
-              screenshots={screenshots}
-              onScreenshotClick={setSelectedScreenshot}
-              onScreenshotDelete={handleScreenshotDelete}
-              onScreenshotRename={handleScreenshotRename}
-            />
-          )}
+          <MiniBrowser
+            projectId={projectId}
+            initialUrl={currentProject.url}
+            onScreenshotCaptured={handleScreenshotCaptured}
+          />
         </div>
 
         {/* Feedback panel */}
         <FeedbackPanel
-          onToggleResolved={handleToggleResolved}
+          screenshots={screenshots}
+          onScreenshotClick={setSelectedScreenshot}
+          onScreenshotDelete={handleScreenshotDelete}
+          onScreenshotRename={handleScreenshotRename}
           onDelete={handleDeleteFeedback}
+          onEdit={handleEditFeedback}
         />
       </div>
 
@@ -446,12 +408,10 @@ export default function ProjectPage() {
       {showFeedbackForm && (
         <FeedbackForm
           projectId={projectId}
-          position={isGeneralFeedback ? null : pendingPinPosition}
+          position={null}
           onSubmit={handleFeedbackSubmit}
           onCancel={() => {
             setShowFeedbackForm(false);
-            setIsGeneralFeedback(false);
-            setPendingPinPosition(null);
           }}
         />
       )}
@@ -464,6 +424,27 @@ export default function ProjectPage() {
           onClose={() => setSelectedScreenshot(null)}
         />
       )}
+
+      {/* Export status modal */}
+      <StatusModal
+        isOpen={exportStatus.isOpen}
+        status={exportStatus.status}
+        title={
+          exportStatus.status === "loading"
+            ? "Exporting..."
+            : exportStatus.status === "success"
+            ? "Export Successful"
+            : "Export Failed"
+        }
+        message={
+          exportStatus.status === "loading"
+            ? `Preparing ${exportStatus.format === "pdf" ? "PDF" : "Markdown"} export...`
+            : exportStatus.status === "success"
+            ? `Your ${exportStatus.format === "pdf" ? "PDF" : "Markdown"} file has been saved.`
+            : "An error occurred while exporting. Please try again."
+        }
+        onClose={() => setExportStatus({ isOpen: false, status: "loading", format: null })}
+      />
     </div>
   );
 }
