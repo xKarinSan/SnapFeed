@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { useStore, Feedback } from "@/lib/store/useStore";
 import { Screenshot } from "@/components/ScreenshotGallery";
+import ConfirmModal from "@/components/ConfirmModal";
+
+const MIN_WIDTH_VW = 10;
+const MAX_WIDTH_VW = 40;
+const DEFAULT_WIDTH_VW = 20;
+const COLLAPSED_WIDTH = 32; // px for the collapsed toggle button area
 
 interface FeedbackPanelProps {
   screenshots: Screenshot[];
@@ -27,6 +33,12 @@ export default function FeedbackPanel({
     setIsAddingFeedback,
   } = useStore();
 
+  // Panel state
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH_VW); // vw units
+  const [isDragging, setIsDragging] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
   // Screenshot rename state
   const [renamingScreenshotId, setRenamingScreenshotId] = useState<string | null>(null);
   const [screenshotRenameValue, setScreenshotRenameValue] = useState("");
@@ -34,6 +46,51 @@ export default function FeedbackPanel({
   // Feedback edit state
   const [editingFeedbackId, setEditingFeedbackId] = useState<string | null>(null);
   const [feedbackEditValue, setFeedbackEditValue] = useState("");
+
+  // Section collapse state
+  const [feedbackSectionCollapsed, setFeedbackSectionCollapsed] = useState(false);
+  const [screenshotSectionCollapsed, setScreenshotSectionCollapsed] = useState(false);
+
+  // Confirm modal state
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "feedback" | "screenshot";
+    id: string;
+  } | null>(null);
+
+  // Handle drag resize
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const viewportWidth = window.innerWidth;
+      const newWidth = ((viewportWidth - e.clientX) / viewportWidth) * 100;
+      const clampedWidth = Math.min(Math.max(newWidth, MIN_WIDTH_VW), MAX_WIDTH_VW);
+      setPanelWidth(clampedWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    // Set cursor on body while dragging for consistent UX
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none";
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
 
   // Only show general feedback (non-ui)
   const generalFeedbacks = feedbacks.filter((f) => f.type === "non-ui");
@@ -93,11 +150,7 @@ export default function FeedbackPanel({
             {feedback.content}
           </p>
           <button
-            onClick={() => {
-              if (confirm("Delete this feedback?")) {
-                onDelete(feedback.id);
-              }
-            }}
+            onClick={() => setDeleteTarget({ type: "feedback", id: feedback.id })}
             className="p-1 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
             title="Delete"
           >
@@ -120,13 +173,62 @@ export default function FeedbackPanel({
   );
 
   return (
-    <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Feedback
-        </h2>
-      </div>
+    <>
+      {/* Full-screen overlay while dragging to capture mouse events over iframes */}
+      {isDragging && (
+        <div className="fixed inset-0 z-50 cursor-ew-resize" />
+      )}
+
+      <div
+        ref={panelRef}
+        className={`bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex h-full relative flex-shrink-0 ${
+          isDragging ? "select-none" : ""
+        }`}
+        style={{
+          width: isCollapsed ? `${COLLAPSED_WIDTH}px` : `${panelWidth}vw`,
+          transition: isDragging ? "none" : "width 0.2s ease-in-out",
+        }}
+      >
+        {/* Drag handle - wider hit area for easier grabbing */}
+        {!isCollapsed && (
+          <div
+            className="absolute -left-2 top-0 bottom-0 w-4 cursor-ew-resize z-10 group/drag flex items-center justify-center"
+            onMouseDown={handleMouseDown}
+          >
+            <div
+              className={`h-full w-1 transition-colors ${
+                isDragging ? "bg-blue-500" : "bg-transparent group-hover/drag:bg-blue-400"
+              }`}
+            />
+          </div>
+        )}
+
+      {/* Collapse toggle button */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-20 w-6 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-l-md flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm"
+        title={isCollapsed ? "Expand panel" : "Collapse panel"}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className={`h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform ${isCollapsed ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      {/* Panel content */}
+      {!isCollapsed && (
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Feedback
+            </h2>
+          </div>
 
       {/* Action button */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -142,38 +244,65 @@ export default function FeedbackPanel({
         </button>
       </div>
 
-      {/* Content - two sections, each 50% height */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {/* General Feedback Section - 50% */}
-        <div className="flex-1 flex flex-col min-h-0 border-b border-gray-200 dark:border-gray-700">
-          <div className="p-4 pb-2 flex-shrink-0">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto">
+        {/* General Feedback Section */}
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setFeedbackSectionCollapsed(!feedbackSectionCollapsed)}
+            className="p-4 pb-2 flex items-center justify-between w-full hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          >
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               General Feedback ({generalFeedbacks.length})
             </h3>
-          </div>
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
-            {generalFeedbacks.length === 0 ? (
-              <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-4">
-                No feedback yet.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {generalFeedbacks.map((feedback) => (
-                  <FeedbackItem key={feedback.id} feedback={feedback} />
-                ))}
-              </div>
-            )}
-          </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-4 w-4 text-gray-400 transition-transform ${feedbackSectionCollapsed ? "-rotate-90" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {!feedbackSectionCollapsed && (
+            <div className="px-4 pb-4">
+              {generalFeedbacks.length === 0 ? (
+                <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-4">
+                  No feedback yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {generalFeedbacks.map((feedback) => (
+                    <FeedbackItem key={feedback.id} feedback={feedback} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Screenshots Section - 50% */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="p-4 pb-2 flex-shrink-0">
+        {/* Screenshots Section */}
+        <div>
+          <button
+            onClick={() => setScreenshotSectionCollapsed(!screenshotSectionCollapsed)}
+            className="p-4 pb-2 flex items-center justify-between w-full hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          >
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Screenshots ({screenshots.length})
             </h3>
-          </div>
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-4 w-4 text-gray-400 transition-transform ${screenshotSectionCollapsed ? "-rotate-90" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {!screenshotSectionCollapsed && (
+            <div className="px-4 pb-4">
             {screenshots.length === 0 ? (
               <p className="text-center text-gray-500 dark:text-gray-400 text-sm py-4">
                 No screenshots yet.
@@ -237,9 +366,7 @@ export default function FeedbackPanel({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm("Delete this screenshot?")) {
-                            onScreenshotDelete(screenshot.id);
-                          }
+                          setDeleteTarget({ type: "screenshot", id: screenshot.id });
                         }}
                         className="p-1 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                         title="Delete"
@@ -262,9 +389,36 @@ export default function FeedbackPanel({
                 ))}
               </div>
             )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
+        <ConfirmModal
+          isOpen={deleteTarget !== null}
+          title={deleteTarget?.type === "screenshot" ? "Delete Screenshot" : "Delete Feedback"}
+          message={deleteTarget?.type === "screenshot"
+            ? "Are you sure you want to delete this screenshot? This action cannot be undone."
+            : "Are you sure you want to delete this feedback? This action cannot be undone."
+          }
+          confirmText="Delete"
+          variant="danger"
+          onConfirm={() => {
+            if (deleteTarget) {
+              if (deleteTarget.type === "screenshot") {
+                onScreenshotDelete(deleteTarget.id);
+              } else {
+                onDelete(deleteTarget.id);
+              }
+              setDeleteTarget(null);
+            }
+          }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      </div>
+    </>
   );
 }
