@@ -6,6 +6,22 @@ import StatusModal from "./StatusModal";
 // Extension ID - update this after loading the extension in Chrome
 const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID || "";
 
+// Viewport preset definitions
+interface ViewportPreset {
+  id: string;
+  name: string;
+  width: number | null;
+  height: number | null;
+  icon: "desktop" | "tablet" | "phone";
+}
+
+const VIEWPORT_PRESETS: ViewportPreset[] = [
+  { id: "desktop", name: "Desktop", width: null, height: null, icon: "desktop" },
+  { id: "tablet", name: "Tablet", width: 768, height: 1024, icon: "tablet" },
+  { id: "mobile", name: "Mobile", width: 375, height: 667, icon: "phone" },
+  { id: "mobile-lg", name: "Mobile Large", width: 428, height: 926, icon: "phone" },
+];
+
 interface Screenshot {
   id: string;
   filename: string;
@@ -38,12 +54,17 @@ export default function MiniBrowser({
   const [inputUrl, setInputUrl] = useState(initialUrl);
   const [isCapturing, setIsCapturing] = useState(false);
   const [extensionAvailable, setExtensionAvailable] = useState(false);
+  const [currentViewport, setCurrentViewport] = useState<ViewportPreset>(VIEWPORT_PRESETS[0]);
+  const [isRotated, setIsRotated] = useState(false);
   const [screenshotStatus, setScreenshotStatus] = useState<{
     isOpen: boolean;
     status: "loading" | "success" | "error";
   }>({ isOpen: false, status: "loading" });
+  const [scale, setScale] = useState(1);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Check if extension is available on mount
   useEffect(() => {
@@ -64,6 +85,39 @@ export default function MiniBrowser({
       }
     );
   }, []);
+
+  // Measure container and calculate scale for viewport
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateScale = () => {
+      const rect = container.getBoundingClientRect();
+      const padding = 32; // padding around viewport
+      const availableWidth = rect.width - padding;
+      const availableHeight = rect.height - padding;
+      setContainerSize({ width: availableWidth, height: availableHeight });
+
+      if (currentViewport.width && currentViewport.height) {
+        const viewportWidth = isRotated ? currentViewport.height : currentViewport.width;
+        const viewportHeight = isRotated ? currentViewport.width : currentViewport.height;
+
+        const scaleX = availableWidth / viewportWidth;
+        const scaleY = availableHeight / viewportHeight;
+        const newScale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+        setScale(newScale);
+      } else {
+        setScale(1);
+      }
+    };
+
+    updateScale();
+
+    const resizeObserver = new ResizeObserver(updateScale);
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.disconnect();
+  }, [currentViewport, isRotated]);
 
   const normalizeUrl = (input: string): string => {
     if (!input.trim()) return "";
@@ -260,6 +314,79 @@ export default function MiniBrowser({
           </svg>
         </button>
 
+        {/* Viewport Toggle */}
+        <div className="flex items-center bg-gray-900 rounded-md border border-gray-600">
+          {VIEWPORT_PRESETS.slice(0, 3).map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => {
+                setCurrentViewport(preset);
+                setIsRotated(false);
+              }}
+              className={`p-2 transition-colors ${
+                currentViewport.id === preset.id
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-white hover:bg-gray-700"
+              } ${preset.id === "desktop" ? "rounded-l-md" : ""} ${
+                preset.id === "mobile" ? "rounded-r-md" : ""
+              }`}
+              title={preset.name}
+            >
+              {preset.icon === "desktop" && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              )}
+              {preset.icon === "tablet" && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              )}
+              {preset.icon === "phone" && (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Rotate button - only show for non-desktop viewports */}
+        {currentViewport.width && (
+          <button
+            onClick={() => setIsRotated(!isRotated)}
+            className={`p-2 rounded transition-colors ${
+              isRotated
+                ? "bg-blue-600 text-white"
+                : "text-gray-400 hover:text-white hover:bg-gray-700"
+            }`}
+            title={isRotated ? "Switch to Portrait" : "Switch to Landscape"}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              {/* Phone in center */}
+              <rect x="8" y="6" width="8" height="12" rx="1" />
+              {/* Rotation arrow around phone */}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 12a8 8 0 0 1 4-6.93M20 12a8 8 0 0 1-4 6.93"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 3l-1 2.5L5.5 5M15 21l1-2.5 2.5.5"
+              />
+            </svg>
+          </button>
+        )}
+
         <form onSubmit={handleNavigate} className="flex-1">
           <input
             type="text"
@@ -329,14 +456,33 @@ export default function MiniBrowser({
       </div>
 
       {/* Iframe container */}
-      <div ref={viewportRef} className="flex-1 bg-white">
+      <div
+        ref={containerRef}
+        className="flex-1 bg-gray-950 flex items-center justify-center overflow-hidden relative"
+      >
         {url ? (
-          <iframe
-            ref={iframeRef}
-            src={url}
-            className="w-full h-full border-0"
-            title="Mini Browser"
-          />
+          <div
+            ref={viewportRef}
+            className={`bg-white transition-all duration-300 origin-center ${
+              currentViewport.width ? "shadow-2xl rounded-lg overflow-hidden" : "w-full h-full"
+            }`}
+            style={
+              currentViewport.width && currentViewport.height
+                ? {
+                    width: isRotated ? currentViewport.height : currentViewport.width,
+                    height: isRotated ? currentViewport.width : currentViewport.height,
+                    transform: scale < 1 ? `scale(${scale})` : undefined,
+                  }
+                : undefined
+            }
+          >
+            <iframe
+              ref={iframeRef}
+              src={url}
+              className="w-full h-full border-0"
+              title="Mini Browser"
+            />
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full bg-gray-900 text-gray-500">
             <div className="text-center">
@@ -356,6 +502,19 @@ export default function MiniBrowser({
               </svg>
               <p className="text-sm">Enter a URL above to browse</p>
             </div>
+          </div>
+        )}
+        {/* Viewport dimensions badge */}
+        {url && currentViewport.width && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-800/90 text-gray-300 text-xs px-3 py-1.5 rounded-full font-medium flex items-center gap-2">
+            <span>
+              {isRotated ? currentViewport.height : currentViewport.width} × {isRotated ? currentViewport.width : currentViewport.height}
+            </span>
+            {scale < 1 && (
+              <span className="text-gray-500">
+                ({Math.round(scale * 100)}%)
+              </span>
+            )}
           </div>
         )}
       </div>
