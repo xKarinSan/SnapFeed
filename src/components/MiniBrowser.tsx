@@ -1,10 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, FormEvent, KeyboardEvent } from "react";
-import StatusModal from "./StatusModal";
-
-// Extension ID - update this after loading the extension in Chrome
-const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID || "";
 
 // Viewport preset definitions
 interface ViewportPreset {
@@ -56,25 +52,37 @@ export default function MiniBrowser({
   const [extensionAvailable, setExtensionAvailable] = useState(false);
   const [currentViewport, setCurrentViewport] = useState<ViewportPreset>(VIEWPORT_PRESETS[0]);
   const [isRotated, setIsRotated] = useState(false);
-  const [screenshotStatus, setScreenshotStatus] = useState<{
-    isOpen: boolean;
-    status: "loading" | "success" | "error";
-  }>({ isOpen: false, status: "loading" });
   const [scale, setScale] = useState(1);
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [extensionId, setExtensionId] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Check if extension is available on mount
+  // Fetch extension ID from backend settings
   useEffect(() => {
-    if (!EXTENSION_ID || !isChromeExtensionAvailable()) {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch("/api/settings");
+        if (response.ok) {
+          const settings = await response.json();
+          setExtensionId(settings.extensionId || "");
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Check if extension is available when extensionId changes
+  useEffect(() => {
+    if (!extensionId || !isChromeExtensionAvailable()) {
       setExtensionAvailable(false);
       return;
     }
 
     chrome.runtime.sendMessage(
-      EXTENSION_ID,
+      extensionId,
       { action: "ping" },
       (response: { status?: string } | undefined) => {
         if (chrome.runtime.lastError) {
@@ -84,7 +92,7 @@ export default function MiniBrowser({
         }
       }
     );
-  }, []);
+  }, [extensionId]);
 
   // Measure container and calculate scale for viewport
   useEffect(() => {
@@ -96,7 +104,6 @@ export default function MiniBrowser({
       const padding = 32; // padding around viewport
       const availableWidth = rect.width - padding;
       const availableHeight = rect.height - padding;
-      setContainerSize({ width: availableWidth, height: availableHeight });
 
       if (currentViewport.width && currentViewport.height) {
         const viewportWidth = isRotated ? currentViewport.height : currentViewport.width;
@@ -156,15 +163,14 @@ export default function MiniBrowser({
   const captureViaExtension = async (
     rect: DOMRect
   ): Promise<string | null> => {
-    console.log("captureViaExtension | EXTENSION_ID",EXTENSION_ID)
-    if (!EXTENSION_ID || !isChromeExtensionAvailable()) {
+    if (!extensionId || !isChromeExtensionAvailable()) {
       return null;
     }
 
     return new Promise((resolve) => {
       const scale = window.devicePixelRatio || 1;
       chrome.runtime.sendMessage(
-        EXTENSION_ID,
+        extensionId,
         {
           action: "captureScreenshot",
           crop: {
@@ -241,7 +247,6 @@ export default function MiniBrowser({
     if (!url || isCapturing || !viewportRef.current) return;
 
     setIsCapturing(true);
-    setScreenshotStatus({ isOpen: true, status: "loading" });
 
     try {
       const rect = viewportRef.current.getBoundingClientRect();
@@ -270,19 +275,13 @@ export default function MiniBrowser({
       if (response.ok) {
         const screenshot = await response.json();
         onScreenshotCaptured?.(screenshot);
-        setScreenshotStatus({ isOpen: true, status: "success" });
       } else {
         const error = await response.json();
         console.error("Screenshot failed:", error);
-        setScreenshotStatus({ isOpen: true, status: "error" });
       }
     } catch (error) {
       if ((error as Error).name !== "NotAllowedError") {
         console.error("Screenshot failed:", error);
-        setScreenshotStatus({ isOpen: true, status: "error" });
-      } else {
-        // User cancelled - just close the modal
-        setScreenshotStatus({ isOpen: false, status: "loading" });
       }
     } finally {
       setIsCapturing(false);
@@ -518,27 +517,6 @@ export default function MiniBrowser({
           </div>
         )}
       </div>
-
-      {/* Screenshot status modal */}
-      <StatusModal
-        isOpen={screenshotStatus.isOpen}
-        status={screenshotStatus.status}
-        title={
-          screenshotStatus.status === "loading"
-            ? "Taking Screenshot..."
-            : screenshotStatus.status === "success"
-            ? "Screenshot Saved"
-            : "Screenshot Failed"
-        }
-        message={
-          screenshotStatus.status === "loading"
-            ? "Capturing the current view..."
-            : screenshotStatus.status === "success"
-            ? "Your screenshot has been saved."
-            : "An error occurred while taking the screenshot."
-        }
-        onClose={() => setScreenshotStatus({ isOpen: false, status: "loading" })}
-      />
     </div>
   );
 }

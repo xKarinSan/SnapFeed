@@ -154,3 +154,24 @@ Exported Markdown/PDF files referenced screenshots by filename, requiring users 
 2. Screenshots are embedded directly in PDF using `pdf-lib`
 3. Annotation markers (numbered circles) are drawn directly on images using `sharp`
 4. Exports are now fully self-contained single files
+
+## Screenshot Modal Appearing in Captures
+
+**Date:** 2026-02-01
+
+**File:** `src/components/MiniBrowser.tsx`
+
+**Problem:**
+When taking a screenshot of the embedded site, the loading modal ("Taking Screenshot...") was appearing in the captured image.
+
+**Root Cause:**
+The `StatusModal` was opened with loading state *before* the screenshot capture occurred. Since the Screen Capture API captures the visible screen, the modal overlay was included in the screenshot.
+
+**Solution:**
+Removed the `StatusModal` for screenshots entirely. The screenshot button already has a built-in loading state (`isCapturing`) that shows a spinner during capture/upload. This provides sufficient feedback without polluting the captured image.
+
+**Changes:**
+1. Removed `StatusModal` import and component from `MiniBrowser.tsx`
+2. Removed `screenshotStatus` state and all `setScreenshotStatus` calls
+3. Removed unused `containerSize` state
+4. Button loading spinner via `isCapturing` provides visual feedback

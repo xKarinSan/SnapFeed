@@ -44,4 +44,7 @@ prisma/dev.db-journal
 # uploads
 /uploads
 
+# local config
+/config
+
 .env

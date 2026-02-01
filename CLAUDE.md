@@ -1,6 +1,6 @@
-# UI Feedback Collector
+# SnapFeed
 
-A single-user UI feedback collection tool built with Next.js.
+A single-user UI feedback and screenshot collection tool built with Next.js.
 
 ## Tech Stack
 
@@ -58,3 +58,7 @@ npx prisma generate
 
 - API routes use Next.js App Router conventions (`route.ts` files)
 - State management via Zustand store in `src/lib/store/useStore.ts`
+
+## Documentation
+
+- `docs/FIXES.md` - Bug fixes and solutions for common issues
