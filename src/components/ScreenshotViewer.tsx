@@ -10,7 +10,6 @@ export interface Annotation {
   id: string;
   screenshotId: string;
   content: string;
-  author: string;
   posX: number;
   posY: number;
   createdAt: string;
@@ -19,13 +18,11 @@ export interface Annotation {
 
 interface ScreenshotViewerProps {
   screenshot: Screenshot;
-  author: string;
   onClose: () => void;
 }
 
 export default function ScreenshotViewer({
   screenshot,
-  author,
   onClose,
 }: ScreenshotViewerProps) {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -67,7 +64,6 @@ export default function ScreenshotViewer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content,
-          author,
           posX: pendingPosition.x,
           posY: pendingPosition.y,
         }),

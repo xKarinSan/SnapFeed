@@ -5,7 +5,7 @@ export async function getProjects() {
     orderBy: { createdAt: "desc" },
     include: {
       _count: {
-        select: { feedbacks: true },
+        select: { sessions: true },
       },
     },
   });
@@ -15,11 +15,16 @@ export async function getProject(id: string) {
   return prisma.project.findUnique({
     where: { id },
     include: {
-      feedbacks: {
+      sessions: {
         orderBy: { createdAt: "desc" },
+        include: {
+          _count: {
+            select: { feedbacks: true, screenshots: true },
+          },
+        },
       },
       _count: {
-        select: { feedbacks: true },
+        select: { sessions: true },
       },
     },
   });

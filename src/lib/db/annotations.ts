@@ -3,7 +3,6 @@ import { prisma } from "./prisma";
 export async function createAnnotation(data: {
   screenshotId: string;
   content: string;
-  author: string;
   posX: number;
   posY: number;
 }) {
@@ -11,7 +10,6 @@ export async function createAnnotation(data: {
     data: {
       screenshotId: data.screenshotId,
       content: data.content,
-      author: data.author,
       posX: data.posX,
       posY: data.posY,
     },

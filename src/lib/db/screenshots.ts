@@ -1,7 +1,6 @@
 import { prisma } from "./prisma";
 
 export async function createScreenshot(data: {
-  projectId: string;
   sessionId: string;
   filename: string;
   pageUrl: string;
@@ -9,7 +8,6 @@ export async function createScreenshot(data: {
 }) {
   return prisma.screenshot.create({
     data: {
-      projectId: data.projectId,
       sessionId: data.sessionId,
       filename: data.filename,
       pageUrl: data.pageUrl,
@@ -18,9 +16,9 @@ export async function createScreenshot(data: {
   });
 }
 
-export async function getScreenshotsByProject(projectId: string) {
+export async function getScreenshotsBySession(sessionId: string) {
   return prisma.screenshot.findMany({
-    where: { projectId },
+    where: { sessionId },
     include: {
       annotations: true,
       _count: {

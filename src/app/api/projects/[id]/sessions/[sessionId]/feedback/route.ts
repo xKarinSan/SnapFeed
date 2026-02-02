@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getFeedbacksByProject,
-  createFeedback,
-  CreateFeedbackInput,
-} from "@/lib/db/feedback";
+import { getFeedbacksBySession, createFeedback } from "@/lib/db/feedback";
 
-type RouteParams = { params: Promise<{ id: string }> };
+type RouteParams = { params: Promise<{ id: string; sessionId: string }> };
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const feedbacks = await getFeedbacksByProject(id);
+    const { sessionId } = await params;
+    const feedbacks = await getFeedbacksBySession(sessionId);
     return NextResponse.json(feedbacks);
   } catch (error) {
     console.error("Failed to fetch feedback:", error);
@@ -23,24 +19,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id: projectId } = await params;
+    const { sessionId } = await params;
     const body = await request.json();
-    const { content, author } = body;
+    const { content } = body;
 
-    if (!content || !author) {
+    if (!content) {
       return NextResponse.json(
-        { error: "Content and author are required" },
+        { error: "Content is required" },
         { status: 400 }
       );
     }
 
-    const feedbackData: CreateFeedbackInput = {
-      projectId,
-      content,
-      author,
-    };
-
-    const feedback = await createFeedback(feedbackData);
+    const feedback = await createFeedback({ sessionId, content });
     return NextResponse.json(feedback, { status: 201 });
   } catch (error) {
     console.error("Failed to create feedback:", error);

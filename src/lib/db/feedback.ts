@@ -1,14 +1,13 @@
 import { prisma } from "./prisma";
 
 export interface CreateFeedbackInput {
-  projectId: string;
+  sessionId: string;
   content: string;
-  author: string;
 }
 
-export async function getFeedbacksByProject(projectId: string) {
+export async function getFeedbacksBySession(sessionId: string) {
   return prisma.feedback.findMany({
-    where: { projectId },
+    where: { sessionId },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -25,10 +24,7 @@ export async function createFeedback(data: CreateFeedbackInput) {
   });
 }
 
-export async function updateFeedback(
-  id: string,
-  data: { content?: string; resolved?: boolean }
-) {
+export async function updateFeedback(id: string, data: { content?: string }) {
   return prisma.feedback.update({
     where: { id },
     data,
@@ -38,15 +34,5 @@ export async function updateFeedback(
 export async function deleteFeedback(id: string) {
   return prisma.feedback.delete({
     where: { id },
-  });
-}
-
-export async function toggleFeedbackResolved(id: string) {
-  const feedback = await prisma.feedback.findUnique({ where: { id } });
-  if (!feedback) throw new Error("Feedback not found");
-
-  return prisma.feedback.update({
-    where: { id },
-    data: { resolved: !feedback.resolved },
   });
 }

@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getFeedback,
-  updateFeedback,
-  deleteFeedback,
-  toggleFeedbackResolved,
-} from "@/lib/db/feedback";
+import { getFeedback, updateFeedback, deleteFeedback } from "@/lib/db/feedback";
 
-type RouteParams = { params: Promise<{ id: string; feedbackId: string }> };
+type RouteParams = {
+  params: Promise<{ id: string; sessionId: string; feedbackId: string }>;
+};
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -34,14 +31,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { feedbackId } = await params;
     const body = await request.json();
-    const { content, resolved, toggleResolved } = body;
+    const { content } = body;
 
-    if (toggleResolved) {
-      const feedback = await toggleFeedbackResolved(feedbackId);
-      return NextResponse.json(feedback);
-    }
-
-    const feedback = await updateFeedback(feedbackId, { content, resolved });
+    const feedback = await updateFeedback(feedbackId, { content });
     return NextResponse.json(feedback);
   } catch (error) {
     console.error("Failed to update feedback:", error);

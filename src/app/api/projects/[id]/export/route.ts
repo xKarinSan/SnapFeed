@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProject } from "@/lib/db/projects";
-import { getScreenshotsByProject } from "@/lib/db/screenshots";
+import { getSessionsByProject } from "@/lib/db/sessions";
+import { getFeedbacksBySession } from "@/lib/db/feedback";
+import { getScreenshotsBySession } from "@/lib/db/screenshots";
 import { generateMarkdownExport } from "@/lib/export/markdown";
 import { generatePdfExport } from "@/lib/export/pdf";
 import { annotateImageWithMarkers } from "@/lib/export/annotateImage";
@@ -19,12 +21,42 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Fetch screenshots with annotations
-    const screenshots = await getScreenshotsByProject(id);
+    // Fetch all sessions for this project
+    const sessions = await getSessionsByProject(id);
 
-    // Convert screenshots to export format with base64 data and annotation markers
-    const exportScreenshots = await Promise.all(
-      screenshots.map(async (screenshot) => {
+    // Collect all feedbacks and screenshots across sessions
+    const allFeedbacks: Array<{
+      content: string;
+      createdAt: string;
+      sessionTitle: string;
+    }> = [];
+
+    const allScreenshots: Array<{
+      pageTitle: string | null;
+      pageUrl: string;
+      base64Data: string;
+      annotations: Array<{
+        content: string;
+        posX: number;
+        posY: number;
+      }>;
+      sessionTitle: string;
+    }> = [];
+
+    for (const session of sessions) {
+      // Get feedbacks for this session
+      const feedbacks = await getFeedbacksBySession(session.id);
+      for (const feedback of feedbacks) {
+        allFeedbacks.push({
+          content: feedback.content,
+          createdAt: feedback.createdAt.toISOString(),
+          sessionTitle: session.title,
+        });
+      }
+
+      // Get screenshots for this session
+      const screenshots = await getScreenshotsBySession(session.id);
+      for (const screenshot of screenshots) {
         let base64Data = "";
 
         try {
@@ -59,32 +91,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           console.warn(`Failed to read screenshot ${screenshot.filename}:`, err);
         }
 
-        return {
-          pageTitle: screenshot.pageTitle,
-          pageUrl: screenshot.pageUrl,
-          base64Data,
-          annotations: screenshot.annotations.map((a) => ({
-            content: a.content,
-            author: a.author,
-            posX: a.posX,
-            posY: a.posY,
-          })),
-        };
-      })
-    );
-
-    // Filter out screenshots that couldn't be read
-    const validScreenshots = exportScreenshots.filter((s) => s.base64Data);
+        if (base64Data) {
+          allScreenshots.push({
+            pageTitle: screenshot.pageTitle,
+            pageUrl: screenshot.pageUrl,
+            base64Data,
+            annotations: screenshot.annotations.map((a) => ({
+              content: a.content,
+              posX: a.posX,
+              posY: a.posY,
+            })),
+            sessionTitle: session.title,
+          });
+        }
+      }
+    }
 
     const exportData = {
       projectName: project.name,
       url: project.url,
-      feedbacks: project.feedbacks.map((f) => ({
-        ...f,
-        createdAt: f.createdAt.toISOString(),
-        type: f.type as "ui" | "non-ui",
+      feedbacks: allFeedbacks.map((f) => ({
+        content: f.content,
+        createdAt: f.createdAt,
+        type: "non-ui" as const,
       })),
-      screenshots: validScreenshots,
+      screenshots: allScreenshots,
     };
 
     const sanitizedName = project.name.replace(/[^a-zA-Z0-9]/g, "-");

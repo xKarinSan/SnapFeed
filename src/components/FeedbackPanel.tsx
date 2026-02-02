@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
-import { useStore, Feedback } from "@/lib/store/useStore";
 import { Screenshot } from "@/components/ScreenshotGallery";
 import ConfirmModal from "@/components/ConfirmModal";
 
@@ -11,7 +10,16 @@ const MAX_WIDTH_VW = 40;
 const DEFAULT_WIDTH_VW = 20;
 const COLLAPSED_WIDTH = 32; // px for the collapsed toggle button area
 
+interface Feedback {
+  id: string;
+  sessionId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface FeedbackPanelProps {
+  feedbacks: Feedback[];
   screenshots: Screenshot[];
   onScreenshotClick: (screenshot: Screenshot) => void;
   onScreenshotDelete: (id: string) => void;
@@ -21,6 +29,7 @@ interface FeedbackPanelProps {
 }
 
 export default function FeedbackPanel({
+  feedbacks,
   screenshots,
   onScreenshotClick,
   onScreenshotDelete,
@@ -28,10 +37,6 @@ export default function FeedbackPanel({
   onDelete,
   onEdit,
 }: FeedbackPanelProps) {
-  const {
-    feedbacks,
-    setIsAddingFeedback,
-  } = useStore();
 
   // Panel state
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -234,7 +239,6 @@ export default function FeedbackPanel({
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <button
           onClick={() => {
-            setIsAddingFeedback(false);
             const event = new CustomEvent("openGeneralFeedback");
             window.dispatchEvent(event);
           }}

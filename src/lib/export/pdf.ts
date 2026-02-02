@@ -1,33 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-
-interface ExportAnnotation {
-  content: string;
-  author: string;
-  posX: number;
-  posY: number;
-}
-
-interface ExportScreenshot {
-  pageTitle: string | null;
-  pageUrl: string;
-  base64Data: string;
-  annotations: ExportAnnotation[];
-}
-
-interface Feedback {
-  id: string;
-  content: string;
-  author: string;
-  resolved: boolean;
-  createdAt: string;
-}
-
-interface ExportData {
-  projectName: string;
-  url: string;
-  feedbacks: Feedback[];
-  screenshots: ExportScreenshot[];
-}
+import { ExportData } from "./markdown";
 
 export async function generatePdfExport(data: ExportData): Promise<Buffer> {
   const { projectName, url, feedbacks, screenshots } = data;

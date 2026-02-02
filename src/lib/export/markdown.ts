@@ -1,8 +1,5 @@
-import { Feedback } from "@/lib/store/useStore";
-
 interface ExportAnnotation {
   content: string;
-  author: string;
   posX: number;
   posY: number;
 }
@@ -14,10 +11,15 @@ interface ExportScreenshot {
   annotations: ExportAnnotation[];
 }
 
-interface ExportData {
+interface ExportFeedback {
+  content: string;
+  createdAt: string;
+}
+
+export interface ExportData {
   projectName: string;
   url: string;
-  feedbacks: Feedback[];
+  feedbacks: ExportFeedback[];
   screenshots: ExportScreenshot[];
 }
 

@@ -1,23 +1,13 @@
 import { create } from "zustand";
 
-export interface Feedback {
-  id: string;
-  projectId: string;
-  content: string;
-  author: string;
-  createdAt: string;
-  resolved: boolean;
-}
-
 export interface Project {
   id: string;
   name: string;
   url: string;
   createdAt: string;
   updatedAt: string;
-  feedbacks?: Feedback[];
   _count?: {
-    feedbacks: number;
+    sessions: number;
   };
 }
 
@@ -33,19 +23,6 @@ interface AppState {
   currentProject: Project | null;
   setCurrentProject: (project: Project | null) => void;
   updateCurrentProject: (updates: Partial<Project>) => void;
-
-  // Feedbacks
-  feedbacks: Feedback[];
-  setFeedbacks: (feedbacks: Feedback[]) => void;
-  addFeedback: (feedback: Feedback) => void;
-  updateFeedback: (id: string, updates: Partial<Feedback>) => void;
-  removeFeedback: (id: string) => void;
-
-  // UI state
-  selectedFeedbackId: string | null;
-  setSelectedFeedbackId: (id: string | null) => void;
-  isAddingFeedback: boolean;
-  setIsAddingFeedback: (value: boolean) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -72,24 +49,4 @@ export const useStore = create<AppState>((set) => ({
         ? { ...state.currentProject, ...updates }
         : null,
     })),
-
-  // Feedbacks
-  feedbacks: [],
-  setFeedbacks: (feedbacks) => set({ feedbacks }),
-  addFeedback: (feedback) =>
-    set((state) => ({ feedbacks: [feedback, ...state.feedbacks] })),
-  updateFeedback: (id, updates) =>
-    set((state) => ({
-      feedbacks: state.feedbacks.map((f) =>
-        f.id === id ? { ...f, ...updates } : f
-      ),
-    })),
-  removeFeedback: (id) =>
-    set((state) => ({ feedbacks: state.feedbacks.filter((f) => f.id !== id) })),
-
-  // UI state
-  selectedFeedbackId: null,
-  setSelectedFeedbackId: (id) => set({ selectedFeedbackId: id }),
-  isAddingFeedback: false,
-  setIsAddingFeedback: (value) => set({ isAddingFeedback: value }),
 }));

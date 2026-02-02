@@ -1,31 +1,53 @@
 "use client";
 
 import Link from "next/link";
-import { Project } from "@/lib/store/useStore";
 
-interface ProjectCardProps {
-  project: Project;
+interface Session {
+  id: string;
+  projectId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    feedbacks: number;
+    screenshots: number;
+  };
+}
+
+interface SessionCardProps {
+  session: Session;
   onDelete: (id: string) => void;
 }
 
-export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
-  const sessionCount = project._count?.sessions ?? 0;
+export default function SessionCard({ session, onDelete }: SessionCardProps) {
+  const feedbackCount = session._count?.feedbacks ?? 0;
+  const screenshotCount = session._count?.screenshots ?? 0;
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-          {project.name}
+          {session.title}
         </h3>
         <button
           onClick={(e) => {
             e.preventDefault();
-            if (confirm("Are you sure you want to delete this project?")) {
-              onDelete(project.id);
+            if (confirm("Are you sure you want to delete this session?")) {
+              onDelete(session.id);
             }
           }}
           className="text-gray-400 hover:text-red-500 transition-colors"
-          title="Delete project"
+          title="Delete session"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -42,16 +64,21 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
         </button>
       </div>
 
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 truncate">
-        {project.url}
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        Created {formatDate(session.createdAt)}
       </p>
 
       <div className="flex justify-between items-center">
-        <span className="text-sm text-gray-600 dark:text-gray-300">
-          {sessionCount} session{sessionCount !== 1 ? "s" : ""}
-        </span>
+        <div className="flex gap-4 text-sm text-gray-600 dark:text-gray-300">
+          <span>
+            {feedbackCount} feedback{feedbackCount !== 1 ? "s" : ""}
+          </span>
+          <span>
+            {screenshotCount} screenshot{screenshotCount !== 1 ? "s" : ""}
+          </span>
+        </div>
         <Link
-          href={`/projects/${project.id}`}
+          href={`/projects/${session.projectId}/sessions/${session.id}`}
           className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
         >
           Open &rarr;

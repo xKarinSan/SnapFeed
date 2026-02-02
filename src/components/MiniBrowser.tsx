@@ -28,6 +28,7 @@ interface Screenshot {
 
 interface MiniBrowserProps {
   projectId: string;
+  sessionId: string;
   initialUrl?: string;
   onScreenshotCaptured?: (screenshot: Screenshot) => void;
 }
@@ -43,6 +44,7 @@ const isChromeExtensionAvailable = () => {
 
 export default function MiniBrowser({
   projectId,
+  sessionId,
   initialUrl = "",
   onScreenshotCaptured,
 }: MiniBrowserProps) {
@@ -268,7 +270,7 @@ export default function MiniBrowser({
         body: JSON.stringify({
           dataUrl,
           pageUrl: url,
-          sessionId: "user",
+          sessionId,
         }),
       });
 

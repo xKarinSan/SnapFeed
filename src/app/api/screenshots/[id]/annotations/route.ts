@@ -5,11 +5,12 @@ import {
 } from "@/lib/db/annotations";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const annotations = await getAnnotationsByScreenshot(params.id);
+    const { id } = await params;
+    const annotations = await getAnnotationsByScreenshot(id);
     return NextResponse.json(annotations);
   } catch (error) {
     console.error("Failed to fetch annotations:", error);
@@ -22,13 +23,14 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
-    const { content, author, posX, posY } = body;
+    const { content, posX, posY } = body;
 
-    if (!content || !author || posX === undefined || posY === undefined) {
+    if (!content || posX === undefined || posY === undefined) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -36,9 +38,8 @@ export async function POST(
     }
 
     const annotation = await createAnnotation({
-      screenshotId: params.id,
+      screenshotId: id,
       content,
-      author,
       posX,
       posY,
     });

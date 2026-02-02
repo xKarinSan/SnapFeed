@@ -86,9 +86,6 @@ export default function AnnotationList({
               <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold">
                 {index + 1}
               </span>
-              <span className="text-gray-300 text-sm font-medium">
-                {annotation.author}
-              </span>
               <span className="text-gray-500 text-xs ml-auto">
                 {formatDate(annotation.createdAt)}
               </span>

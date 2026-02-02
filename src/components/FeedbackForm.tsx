@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useStore } from "@/lib/store/useStore";
 
 interface FeedbackFormProps {
-  projectId: string;
   onSubmit: (data: { content: string }) => Promise<void>;
   onCancel: () => void;
 }
@@ -15,7 +13,6 @@ export default function FeedbackForm({
 }: FeedbackFormProps) {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { setIsAddingFeedback } = useStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +24,6 @@ export default function FeedbackForm({
         content: content.trim(),
       });
       setContent("");
-      setIsAddingFeedback(false);
     } catch (error) {
       console.error("Failed to submit feedback:", error);
     } finally {
@@ -37,7 +33,6 @@ export default function FeedbackForm({
 
   const handleCancel = () => {
     setContent("");
-    setIsAddingFeedback(false);
     onCancel();
   };
 

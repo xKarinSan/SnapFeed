@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getScreenshotsByProject, createScreenshot } from "@/lib/db/screenshots";
+import { createScreenshot } from "@/lib/db/screenshots";
 import { v4 as uuidv4 } from "uuid";
 import * as fs from "fs";
 import * as path from "path";
@@ -11,33 +11,25 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const screenshots = await getScreenshotsByProject(params.id);
-    return NextResponse.json(screenshots);
-  } catch (error) {
-    console.error("Failed to fetch screenshots:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch screenshots" },
-      { status: 500 }
-    );
-  }
-}
-
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await params; // Validate params exist
     const body = await request.json();
     const { dataUrl, pageUrl, sessionId } = body;
 
     if (!dataUrl) {
       return NextResponse.json(
         { error: "dataUrl is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!sessionId) {
+      return NextResponse.json(
+        { error: "sessionId is required" },
         { status: 400 }
       );
     }
@@ -64,8 +56,7 @@ export async function POST(
 
     // Save to database
     const screenshot = await createScreenshot({
-      projectId: params.id,
-      sessionId: sessionId || "anonymous",
+      sessionId,
       filename,
       pageUrl: pageUrl || "",
       pageTitle: undefined,
