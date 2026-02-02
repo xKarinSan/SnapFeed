@@ -1,17 +1,9 @@
 import { prisma } from "./prisma";
 
-export type FeedbackType = "ui" | "non-ui";
-
 export interface CreateFeedbackInput {
   projectId: string;
-  type: FeedbackType;
   content: string;
   author: string;
-  posX?: number;
-  posY?: number;
-  viewportW?: number;
-  viewportH?: number;
-  selector?: string;
 }
 
 export async function getFeedbacksByProject(projectId: string) {

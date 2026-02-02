@@ -5,28 +5,17 @@ import { useStore } from "@/lib/store/useStore";
 
 interface FeedbackFormProps {
   projectId: string;
-  position?: { x: number; y: number } | null;
-  onSubmit: (data: {
-    type: "ui" | "non-ui";
-    content: string;
-    posX?: number;
-    posY?: number;
-    viewportW?: number;
-    viewportH?: number;
-  }) => Promise<void>;
+  onSubmit: (data: { content: string }) => Promise<void>;
   onCancel: () => void;
 }
 
 export default function FeedbackForm({
-  position,
   onSubmit,
   onCancel,
 }: FeedbackFormProps) {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { setIsAddingFeedback, setPendingPinPosition } = useStore();
-
-  const isUIFeedback = position !== null && position !== undefined;
+  const { setIsAddingFeedback } = useStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,16 +24,10 @@ export default function FeedbackForm({
     setIsSubmitting(true);
     try {
       await onSubmit({
-        type: isUIFeedback ? "ui" : "non-ui",
         content: content.trim(),
-        posX: position?.x,
-        posY: position?.y,
-        viewportW: typeof window !== "undefined" ? window.innerWidth : undefined,
-        viewportH: typeof window !== "undefined" ? window.innerHeight : undefined,
       });
       setContent("");
       setIsAddingFeedback(false);
-      setPendingPinPosition(null);
     } catch (error) {
       console.error("Failed to submit feedback:", error);
     } finally {
@@ -55,7 +38,6 @@ export default function FeedbackForm({
   const handleCancel = () => {
     setContent("");
     setIsAddingFeedback(false);
-    setPendingPinPosition(null);
     onCancel();
   };
 
@@ -63,14 +45,8 @@ export default function FeedbackForm({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          {isUIFeedback ? "Add UI Feedback" : "Add General Feedback"}
+          Add Feedback
         </h2>
-
-        {isUIFeedback && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Position: ({position?.x.toFixed(1)}%, {position?.y.toFixed(1)}%)
-          </p>
-        )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">

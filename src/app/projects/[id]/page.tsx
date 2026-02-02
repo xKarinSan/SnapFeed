@@ -141,19 +141,12 @@ export default function ProjectPage() {
     }
   };
 
-  const handleFeedbackSubmit = async (data: {
-    type: "ui" | "non-ui";
-    content: string;
-    posX?: number;
-    posY?: number;
-    viewportW?: number;
-    viewportH?: number;
-  }) => {
+  const handleFeedbackSubmit = async (data: { content: string }) => {
     const response = await fetch(`/api/projects/${projectId}/feedback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...data,
+        content: data.content,
         author: "User",
       }),
     });
@@ -408,7 +401,6 @@ export default function ProjectPage() {
       {showFeedbackForm && (
         <FeedbackForm
           projectId={projectId}
-          position={null}
           onSubmit={handleFeedbackSubmit}
           onCancel={() => {
             setShowFeedbackForm(false);

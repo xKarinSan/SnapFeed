@@ -25,33 +25,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: projectId } = await params;
     const body = await request.json();
-    const { type, content, author, posX, posY, viewportW, viewportH, selector } =
-      body;
+    const { content, author } = body;
 
-    if (!type || !content || !author) {
+    if (!content || !author) {
       return NextResponse.json(
-        { error: "Type, content, and author are required" },
-        { status: 400 }
-      );
-    }
-
-    if (type === "ui" && (posX === undefined || posY === undefined)) {
-      return NextResponse.json(
-        { error: "UI feedback requires position coordinates" },
+        { error: "Content and author are required" },
         { status: 400 }
       );
     }
 
     const feedbackData: CreateFeedbackInput = {
       projectId,
-      type,
       content,
       author,
-      posX,
-      posY,
-      viewportW,
-      viewportH,
-      selector,
     };
 
     const feedback = await createFeedback(feedbackData);

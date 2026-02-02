@@ -92,8 +92,8 @@ export default function FeedbackPanel({
     };
   }, [isDragging]);
 
-  // Only show general feedback (non-ui)
-  const generalFeedbacks = feedbacks.filter((f) => f.type === "non-ui");
+  // All feedbacks are general feedbacks now
+  const generalFeedbacks = feedbacks;
 
   const handleStartScreenshotRename = (screenshot: Screenshot) => {
     setRenamingScreenshotId(screenshot.id);

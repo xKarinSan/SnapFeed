@@ -3,14 +3,8 @@ import { create } from "zustand";
 export interface Feedback {
   id: string;
   projectId: string;
-  type: "ui" | "non-ui";
   content: string;
   author: string;
-  posX?: number | null;
-  posY?: number | null;
-  viewportW?: number | null;
-  viewportH?: number | null;
-  selector?: string | null;
   createdAt: string;
   resolved: boolean;
 }
@@ -52,8 +46,6 @@ interface AppState {
   setSelectedFeedbackId: (id: string | null) => void;
   isAddingFeedback: boolean;
   setIsAddingFeedback: (value: boolean) => void;
-  pendingPinPosition: { x: number; y: number } | null;
-  setPendingPinPosition: (position: { x: number; y: number } | null) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -100,6 +92,4 @@ export const useStore = create<AppState>((set) => ({
   setSelectedFeedbackId: (id) => set({ selectedFeedbackId: id }),
   isAddingFeedback: false,
   setIsAddingFeedback: (value) => set({ isAddingFeedback: value }),
-  pendingPinPosition: null,
-  setPendingPinPosition: (position) => set({ pendingPinPosition: position }),
 }));

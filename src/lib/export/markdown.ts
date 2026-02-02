@@ -24,9 +24,6 @@ interface ExportData {
 export function generateMarkdownExport(data: ExportData): string {
   const { projectName, url, feedbacks, screenshots } = data;
 
-  const uiFeedbacks = feedbacks.filter((f) => f.type === "ui");
-  const generalFeedbacks = feedbacks.filter((f) => f.type === "non-ui");
-
   const exportDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -43,12 +40,12 @@ export function generateMarkdownExport(data: ExportData): string {
 
 `;
 
-  // 2) General Notes (non-UI feedback)
-  if (generalFeedbacks.length > 0) {
+  // 2) General Notes
+  if (feedbacks.length > 0) {
     markdown += `## General Notes
 
 `;
-    generalFeedbacks.forEach((feedback) => {
+    feedbacks.forEach((feedback) => {
       markdown += `- ${escapeMarkdown(feedback.content)}
 `;
     });
@@ -90,33 +87,6 @@ export function generateMarkdownExport(data: ExportData): string {
 
 `;
       }
-    });
-  }
-
-  // 4) UI Feedback (if any)
-  if (uiFeedbacks.length > 0) {
-    if (screenshots.length > 0 || generalFeedbacks.length > 0) {
-      markdown += `---
-
-`;
-    }
-
-    markdown += `## UI Feedback
-
-`;
-    uiFeedbacks.forEach((feedback, index) => {
-      const status = feedback.resolved ? "Resolved" : "Open";
-      const statusIcon = feedback.resolved ? " ✓" : "";
-
-      markdown += `### ${index + 1}. "${escapeMarkdown(feedback.content)}" — ${feedback.author}
-`;
-      if (feedback.posX !== null && feedback.posY !== null) {
-        markdown += `- **Position**: (x: ${feedback.posX?.toFixed(1)}%, y: ${feedback.posY?.toFixed(1)}%)
-`;
-      }
-      markdown += `- **Status**: ${status}${statusIcon}
-
-`;
     });
   }
 

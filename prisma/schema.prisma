@@ -24,16 +24,8 @@ model Feedback {
   id        String  @id @default(cuid())
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  type      String  // "ui" | "non-ui"
   content   String
   author    String  // Display name from session
-
-  // UI feedback positioning (null for non-ui type)
-  posX      Float?
-  posY      Float?
-  viewportW Int?
-  viewportH Int?
-  selector  String? // Optional CSS selector for element
 
   createdAt DateTime @default(now())
   resolved  Boolean  @default(false)

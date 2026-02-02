@@ -18,10 +18,7 @@ interface Feedback {
   id: string;
   content: string;
   author: string;
-  type: "ui" | "non-ui";
   resolved: boolean;
-  posX: number | null;
-  posY: number | null;
   createdAt: string;
 }
 
@@ -34,9 +31,6 @@ interface ExportData {
 
 export async function generatePdfExport(data: ExportData): Promise<Buffer> {
   const { projectName, url, feedbacks, screenshots } = data;
-
-  const uiFeedbacks = feedbacks.filter((f) => f.type === "ui");
-  const generalFeedbacks = feedbacks.filter((f) => f.type === "non-ui");
 
   const exportDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
@@ -143,12 +137,12 @@ export async function generatePdfExport(data: ExportData): Promise<Buffer> {
 
   drawHorizontalRule();
 
-  // 2) General Notes (non-UI feedback)
-  if (generalFeedbacks.length > 0) {
+  // 2) General Notes
+  if (feedbacks.length > 0) {
     drawText("General Notes", { font: helveticaBold, size: 16 });
     addSpace(8);
 
-    for (const feedback of generalFeedbacks) {
+    for (const feedback of feedbacks) {
       drawText(`• ${feedback.content}`, { indent: 10 });
       addSpace(4);
     }
@@ -228,22 +222,6 @@ export async function generatePdfExport(data: ExportData): Promise<Buffer> {
       if (i < screenshots.length - 1) {
         drawHorizontalRule();
       }
-    }
-  }
-
-  // 4) UI Feedback (if any)
-  if (uiFeedbacks.length > 0) {
-    if (screenshots.length > 0 || generalFeedbacks.length > 0) {
-      drawHorizontalRule();
-    }
-
-    drawText("UI Feedback", { font: helveticaBold, size: 16 });
-    addSpace(8);
-
-    for (let i = 0; i < uiFeedbacks.length; i++) {
-      const feedback = uiFeedbacks[i];
-      drawText(`${i + 1}. ${feedback.content}`, { indent: 10 });
-      addSpace(2);
     }
   }
 
