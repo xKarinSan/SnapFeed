@@ -100,6 +100,22 @@ export default function ProjectPage() {
     }
   };
 
+  const handleRenameSession = async (id: string, newTitle: string) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/sessions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle }),
+      });
+
+      if (response.ok) {
+        setSessions(prev => prev.map(s => s.id === id ? { ...s, title: newTitle } : s));
+      }
+    } catch (error) {
+      console.error("Failed to rename session:", error);
+    }
+  };
+
   const handleRenameProject = async () => {
     const trimmedName = editedName.trim();
     if (!trimmedName || trimmedName === project?.name) {
@@ -277,6 +293,7 @@ export default function ProjectPage() {
                 key={session.id}
                 session={session}
                 onDelete={handleDeleteSession}
+                onRename={handleRenameSession}
               />
             ))}
           </div>

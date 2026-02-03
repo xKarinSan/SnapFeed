@@ -6,7 +6,7 @@ import ProjectCard from "@/components/ProjectCard";
 import CreateProjectModal from "@/components/CreateProjectModal";
 
 export default function Dashboard() {
-  const { projects, setProjects, addProject, removeProject } = useStore();
+  const { projects, setProjects, addProject, updateProject, removeProject } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -39,6 +39,22 @@ export default function Dashboard() {
 
     const newProject: Project = await response.json();
     addProject(newProject);
+  };
+
+  const handleRenameProject = async (id: string, newName: string) => {
+    try {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newName }),
+      });
+
+      if (response.ok) {
+        updateProject(id, { name: newName });
+      }
+    } catch (error) {
+      console.error("Failed to rename project:", error);
+    }
   };
 
   const handleDeleteProject = async (id: string) => {
@@ -127,6 +143,7 @@ export default function Dashboard() {
                 key={project.id}
                 project={project}
                 onDelete={handleDeleteProject}
+                onRename={handleRenameProject}
               />
             ))}
           </div>

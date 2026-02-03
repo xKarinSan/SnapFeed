@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Project } from "@/lib/store/useStore";
 import ConfirmModal from "./ConfirmModal";
@@ -8,18 +8,83 @@ import ConfirmModal from "./ConfirmModal";
 interface ProjectCardProps {
   project: Project;
   onDelete: (id: string) => void;
+  onRename: (id: string, newName: string) => void;
 }
 
-export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
+export default function ProjectCard({ project, onDelete, onRename }: ProjectCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(project.name);
+  const inputRef = useRef<HTMLInputElement>(null);
   const sessionCount = project._count?.sessions ?? 0;
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    const trimmedName = editedName.trim();
+    if (trimmedName && trimmedName !== project.name) {
+      onRename(project.id, trimmedName);
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedName(project.name);
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      handleCancel();
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-          {project.name}
-        </h3>
+        {isEditing ? (
+          <div className="flex items-center gap-2 flex-1 mr-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleSave}
+              className="flex-1 px-2 py-1 text-lg font-semibold border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+              {project.name}
+            </h3>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                setIsEditing(true);
+              }}
+              className="text-gray-400 hover:text-blue-500 transition-colors flex-shrink-0"
+              title="Rename project"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+            </button>
+          </div>
+        )}
         <button
           onClick={(e) => {
             e.preventDefault();
