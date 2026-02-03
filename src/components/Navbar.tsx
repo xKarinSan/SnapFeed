@@ -8,10 +8,11 @@ import SettingsModal from "./SettingsModal";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { currentProject } = useStore();
+  const { currentProject, currentSession } = useStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const isProjectPage = pathname.startsWith("/projects/");
+  const isSessionPage = pathname.includes("/sessions/");
 
   return (
     <>
@@ -46,9 +47,26 @@ export default function Navbar() {
             {isProjectPage && currentProject && (
               <>
                 <span className="text-gray-400 dark:text-gray-500">/</span>
-                <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[200px]">
-                  {currentProject.name}
-                </span>
+                {isSessionPage ? (
+                  <Link
+                    href={`/projects/${currentProject.id}`}
+                    className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium truncate max-w-[200px] transition-colors"
+                  >
+                    {currentProject.name}
+                  </Link>
+                ) : (
+                  <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[200px]">
+                    {currentProject.name}
+                  </span>
+                )}
+                {isSessionPage && currentSession && (
+                  <>
+                    <span className="text-gray-400 dark:text-gray-500">/</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-medium truncate max-w-[200px]">
+                      {currentSession.title}
+                    </span>
+                  </>
+                )}
               </>
             )}
           </div>

@@ -11,6 +11,12 @@ export interface Project {
   };
 }
 
+export interface Session {
+  id: string;
+  title: string;
+  projectId: string;
+}
+
 interface AppState {
   // Projects
   projects: Project[];
@@ -23,6 +29,10 @@ interface AppState {
   currentProject: Project | null;
   setCurrentProject: (project: Project | null) => void;
   updateCurrentProject: (updates: Partial<Project>) => void;
+
+  // Current session
+  currentSession: Session | null;
+  setCurrentSession: (session: Session | null) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -49,4 +59,8 @@ export const useStore = create<AppState>((set) => ({
         ? { ...state.currentProject, ...updates }
         : null,
     })),
+
+  // Current session
+  currentSession: null,
+  setCurrentSession: (session) => set({ currentSession: session }),
 }));

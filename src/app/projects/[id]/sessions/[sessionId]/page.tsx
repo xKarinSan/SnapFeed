@@ -40,7 +40,7 @@ export default function SessionPage() {
   const projectId = params.id as string;
   const sessionId = params.sessionId as string;
 
-  const { currentProject, setCurrentProject } = useStore();
+  const { currentProject, setCurrentProject, setCurrentSession } = useStore();
 
   const [session, setSession] = useState<Session | null>(null);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
@@ -72,8 +72,10 @@ export default function SessionPage() {
     window.addEventListener("openGeneralFeedback", handleGeneralFeedback);
     return () => {
       window.removeEventListener("openGeneralFeedback", handleGeneralFeedback);
+      // Clear session when leaving
+      setCurrentSession(null);
     };
-  }, [projectId, sessionId]);
+  }, [projectId, sessionId, setCurrentSession]);
 
   const fetchSession = async () => {
     try {
@@ -84,6 +86,12 @@ export default function SessionPage() {
       }
       const data: Session = await response.json();
       setSession(data);
+      // Set current session for navbar
+      setCurrentSession({
+        id: data.id,
+        title: data.title,
+        projectId: data.projectId,
+      });
       // Also set the project for compatibility
       if (data.project) {
         setCurrentProject({
@@ -167,6 +175,12 @@ export default function SessionPage() {
     }
   };
 
+  const handleAnnotationCountChange = useCallback((screenshotId: string, count: number) => {
+    setScreenshots(prev => prev.map(s =>
+      s.id === screenshotId ? { ...s, _count: { annotations: count } } : s
+    ));
+  }, []);
+
   const handleFeedbackSubmit = async (data: { content: string }) => {
     const response = await fetch(`/api/projects/${projectId}/sessions/${sessionId}/feedback`, {
       method: "POST",
@@ -233,6 +247,12 @@ export default function SessionPage() {
       });
       if (response.ok) {
         setSession(prev => prev ? { ...prev, title: trimmedTitle } : null);
+        // Update navbar session title
+        setCurrentSession({
+          id: sessionId,
+          title: trimmedTitle,
+          projectId: projectId,
+        });
       }
     } catch (error) {
       console.error("Failed to rename session:", error);
@@ -439,6 +459,7 @@ export default function SessionPage() {
         <ScreenshotViewer
           screenshot={selectedScreenshot}
           onClose={() => setSelectedScreenshot(null)}
+          onAnnotationCountChange={handleAnnotationCountChange}
         />
       )}
 

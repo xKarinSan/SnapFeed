@@ -19,11 +19,13 @@ export interface Annotation {
 interface ScreenshotViewerProps {
   screenshot: Screenshot;
   onClose: () => void;
+  onAnnotationCountChange?: (screenshotId: string, count: number) => void;
 }
 
 export default function ScreenshotViewer({
   screenshot,
   onClose,
+  onAnnotationCountChange,
 }: ScreenshotViewerProps) {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
@@ -71,7 +73,11 @@ export default function ScreenshotViewer({
 
       if (response.ok) {
         const newAnnotation = await response.json();
-        setAnnotations((prev) => [...prev, newAnnotation]);
+        setAnnotations((prev) => {
+          const updated = [...prev, newAnnotation];
+          onAnnotationCountChange?.(screenshot.id, updated.length);
+          return updated;
+        });
         setShowForm(false);
         setPendingPosition(null);
       }
@@ -112,7 +118,11 @@ export default function ScreenshotViewer({
       );
 
       if (response.ok) {
-        setAnnotations((prev) => prev.filter((a) => a.id !== id));
+        setAnnotations((prev) => {
+          const updated = prev.filter((a) => a.id !== id);
+          onAnnotationCountChange?.(screenshot.id, updated.length);
+          return updated;
+        });
         if (selectedAnnotationId === id) {
           setSelectedAnnotationId(null);
         }
