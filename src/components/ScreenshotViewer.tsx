@@ -32,6 +32,7 @@ export default function ScreenshotViewer({
   const [isAddingAnnotation, setIsAddingAnnotation] = useState(false);
   const [pendingPosition, setPendingPosition] = useState<{ x: number; y: number } | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   useEffect(() => {
     fetchAnnotations();
@@ -152,17 +153,17 @@ export default function ScreenshotViewer({
   }, [showForm, isAddingAnnotation, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 flex">
+    <div className={`fixed inset-0 z-50 bg-white/95 dark:bg-black/90 flex ${isDarkMode ? "dark" : ""}`}>
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 h-14 bg-gray-900/80 backdrop-blur-sm flex items-center justify-between px-4 z-10">
+      <div className="absolute top-0 left-0 right-0 h-14 bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-between px-4 z-10 border-b border-gray-200 dark:border-transparent">
         <div className="flex items-center gap-4">
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-white"
+              className="h-5 w-5 text-gray-700 dark:text-white"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -176,39 +177,79 @@ export default function ScreenshotViewer({
             </svg>
           </button>
           <div>
-            <h2 className="text-white font-medium truncate max-w-md">
+            <h2 className="text-gray-900 dark:text-white font-medium truncate max-w-md">
               {screenshot.pageTitle || "Screenshot"}
             </h2>
-            <p className="text-gray-400 text-xs truncate max-w-md">
+            <p className="text-gray-500 dark:text-gray-400 text-xs truncate max-w-md">
               {screenshot.pageUrl}
             </p>
           </div>
         </div>
 
-        <button
-          onClick={() => setIsAddingAnnotation(true)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            isAddingAnnotation
-              ? "bg-blue-600 text-white"
-              : "bg-white/10 text-white hover:bg-white/20"
-          }`}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
+            title={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Add Note
-        </button>
+            {isDarkMode ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-gray-700 dark:text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-gray-700 dark:text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                />
+              </svg>
+            )}
+          </button>
+
+          <button
+            onClick={() => setIsAddingAnnotation(true)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              isAddingAnnotation
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+            }`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add Note
+          </button>
+        </div>
       </div>
 
       {/* Main content */}
@@ -219,7 +260,7 @@ export default function ScreenshotViewer({
             <img
               src={`/api/uploads/screenshots/${screenshot.filename}`}
               alt={screenshot.pageTitle || "Screenshot"}
-              className="max-w-full max-h-[calc(100vh-8rem)] object-contain"
+              className="max-w-full max-h-[calc(100vh-8rem)] object-contain shadow-lg rounded"
             />
             <AnnotationCanvas
               annotations={annotations}
@@ -240,7 +281,7 @@ export default function ScreenshotViewer({
         </div>
 
         {/* Annotations sidebar */}
-        <div className="w-80 bg-gray-900 border-l border-gray-800 overflow-y-auto">
+        <div className="w-80 bg-gray-50 dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 overflow-y-auto">
           <AnnotationList
             annotations={annotations}
             selectedId={selectedAnnotationId}

@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Project } from "@/lib/store/useStore";
+import ConfirmModal from "./ConfirmModal";
 
 interface ProjectCardProps {
   project: Project;
@@ -9,6 +11,7 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const sessionCount = project._count?.sessions ?? 0;
 
   return (
@@ -20,9 +23,7 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
         <button
           onClick={(e) => {
             e.preventDefault();
-            if (confirm("Are you sure you want to delete this project?")) {
-              onDelete(project.id);
-            }
+            setShowDeleteModal(true);
           }}
           className="text-gray-400 hover:text-red-500 transition-colors"
           title="Delete project"
@@ -40,6 +41,20 @@ export default function ProjectCard({ project, onDelete }: ProjectCardProps) {
             />
           </svg>
         </button>
+
+        <ConfirmModal
+          isOpen={showDeleteModal}
+          title="Delete Project"
+          message={`Are you sure you want to delete "${project.name}"? This will also delete all sessions and feedback associated with this project.`}
+          confirmText="Delete"
+          cancelText="Cancel"
+          variant="danger"
+          onConfirm={() => {
+            onDelete(project.id);
+            setShowDeleteModal(false);
+          }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
       </div>
 
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 truncate">

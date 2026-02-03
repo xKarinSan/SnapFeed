@@ -33,6 +33,11 @@ interface AppState {
   // Current session
   currentSession: Session | null;
   setCurrentSession: (session: Session | null) => void;
+
+  // Theme
+  isDarkMode: boolean;
+  setIsDarkMode: (isDarkMode: boolean) => void;
+  toggleDarkMode: () => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -63,4 +68,9 @@ export const useStore = create<AppState>((set) => ({
   // Current session
   currentSession: null,
   setCurrentSession: (session) => set({ currentSession: session }),
+
+  // Theme
+  isDarkMode: true,
+  setIsDarkMode: (isDarkMode) => set({ isDarkMode }),
+  toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
 }));
