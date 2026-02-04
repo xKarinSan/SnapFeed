@@ -73,8 +73,8 @@ Session Page → LarkExportModal → /api/lark/export
 | `src/lib/lark/messageBuilder.ts` | Build message card for sharing |
 | `src/lib/export/lark.ts` | Lark export orchestrator |
 | `src/components/LarkExportModal.tsx` | Export dialog with folder and chat selection |
-| `src/app/api/lark/auth/route.ts` | GET: returns OAuth URL, POST: exchange code for token |
-| `src/app/api/lark/callback/route.ts` | OAuth callback handler |
+| `src/app/api/lark/auth/route.ts` | GET: returns OAuth URL |
+| `src/app/api/lark/callback/route.ts` | OAuth callback - exchanges code, stores tokens, closes popup |
 | `src/app/api/lark/folders/route.ts` | GET endpoint for folder list |
 | `src/app/api/lark/chats/route.ts` | GET endpoint for user's chats |
 | `src/app/api/lark/export/route.ts` | POST endpoint for export and share |
@@ -125,16 +125,19 @@ Session Page → LarkExportModal → /api/lark/export
 ### Phase 2: Settings UI & OAuth
 
 4. **Add Lark settings section** to `src/components/SettingsModal.tsx`
+   - Collapsible "Lark Integration" section
    - App ID input (text)
    - App Secret input (masked with toggle)
-   - "Connect Lark Account" button (initiates OAuth)
-   - When connected: shows user name + "Disconnect" button
+   - **Authentication UI:**
+     - Not connected: "Connect Lark Account" button → opens OAuth popup/redirect
+     - Connected: shows user avatar + name + "Disconnect" button
+   - Connection status indicator (connected/disconnected)
 
-5. **Create OAuth callback page** (`src/app/lark/callback/page.tsx`)
-   - Handles OAuth redirect from Lark
+5. **Create OAuth callback handler** (`src/app/api/lark/callback/route.ts`)
+   - API route that handles OAuth redirect from Lark
    - Exchanges auth code for tokens
    - Stores tokens in settings
-   - Redirects back to app with success/error state
+   - Returns HTML that closes popup and notifies parent window (or redirects back to settings)
 
 ### Phase 3: Export Logic
 
@@ -165,8 +168,8 @@ Session Page → LarkExportModal → /api/lark/export
 ### Phase 4: API Endpoints
 
 9. **Create auth endpoint** (`src/app/api/lark/auth/route.ts`)
-   - GET: returns OAuth authorization URL
-   - POST: exchange auth code for access/refresh tokens
+   - GET: returns OAuth authorization URL for popup/redirect
+   - DELETE: disconnect (clear stored tokens)
 
 10. **Create folders endpoint** (`src/app/api/lark/folders/route.ts`)
     - GET request (requires authenticated user)
@@ -244,11 +247,12 @@ Session Page → LarkExportModal → /api/lark/export
 
 1. **Settings & OAuth**
    - Open Settings modal
+   - Expand "Lark Integration" section
    - Enter Lark App ID and App Secret, save
-   - Click "Connect Lark Account"
-   - Redirected to Lark login, authorize the app
-   - Redirected back, see connected user name
-   - Verify "Disconnect" button works
+   - Click "Connect Lark Account" → OAuth popup opens
+   - Authorize in popup → popup closes
+   - Settings modal shows connected user name + avatar
+   - Click "Disconnect" → returns to disconnected state
 
 2. **Export**
    - Navigate to a session with feedback and screenshots

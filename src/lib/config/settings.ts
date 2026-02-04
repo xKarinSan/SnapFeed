@@ -1,8 +1,20 @@
 import fs from "fs";
 import path from "path";
 
+export interface LarkSettings {
+  appId: string;
+  appSecret: string;
+  accessToken?: string;
+  refreshToken?: string;
+  tokenExpiresAt?: number;
+  userId?: string;
+  userName?: string;
+  userAvatar?: string;
+}
+
 export interface AppSettings {
   extensionId: string;
+  lark?: LarkSettings;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -40,7 +52,20 @@ export function updateSettings(updates: Partial<AppSettings>): AppSettings {
   ensureConfigDir();
 
   const current = getSettings();
-  const updated = { ...current, ...updates };
+
+  // Deep merge for lark settings to preserve tokens when updating app credentials
+  const updated: AppSettings = {
+    ...current,
+    ...updates,
+  };
+
+  // If updating lark, merge with existing lark settings
+  if (updates.lark && current.lark) {
+    updated.lark = {
+      ...current.lark,
+      ...updates.lark,
+    };
+  }
 
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(updated, null, 2));
 

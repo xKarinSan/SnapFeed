@@ -17,6 +17,13 @@ export interface Session {
   projectId: string;
 }
 
+export interface LarkAuthState {
+  isConnected: boolean;
+  userName?: string;
+  userAvatar?: string;
+  appConfigured: boolean; // Has App ID and Secret
+}
+
 interface AppState {
   // Projects
   projects: Project[];
@@ -38,6 +45,11 @@ interface AppState {
   isDarkMode: boolean;
   setIsDarkMode: (isDarkMode: boolean) => void;
   toggleDarkMode: () => void;
+
+  // Lark integration
+  larkAuth: LarkAuthState;
+  setLarkAuth: (auth: LarkAuthState) => void;
+  updateLarkAuth: (updates: Partial<LarkAuthState>) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -73,4 +85,15 @@ export const useStore = create<AppState>((set) => ({
   isDarkMode: true,
   setIsDarkMode: (isDarkMode) => set({ isDarkMode }),
   toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
+
+  // Lark integration
+  larkAuth: {
+    isConnected: false,
+    appConfigured: false,
+  },
+  setLarkAuth: (auth) => set({ larkAuth: auth }),
+  updateLarkAuth: (updates) =>
+    set((state) => ({
+      larkAuth: { ...state.larkAuth, ...updates },
+    })),
 }));

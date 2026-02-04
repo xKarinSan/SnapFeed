@@ -11,6 +11,7 @@ import { Screenshot } from "@/components/ScreenshotGallery";
 import ScreenshotViewer from "@/components/ScreenshotViewer";
 import { useToast } from "@/components/Toast";
 import StatusModal from "@/components/StatusModal";
+import LarkExportModal from "@/components/LarkExportModal";
 
 interface Session {
   id: string;
@@ -59,6 +60,10 @@ export default function SessionPage() {
     status: "loading" | "success" | "error";
     format: "markdown" | "pdf" | null;
   }>({ isOpen: false, status: "loading", format: null });
+
+  // Lark export modal state
+  const [isLarkExportOpen, setIsLarkExportOpen] = useState(false);
+  const { larkAuth } = useStore();
 
   useEffect(() => {
     fetchSession();
@@ -418,6 +423,19 @@ export default function SessionPage() {
               </svg>
               Export (.pdf)
             </button>
+            {larkAuth.appConfigured && (
+              <button
+                onClick={() => setIsLarkExportOpen(true)}
+                disabled={!larkAuth.isConnected}
+                title={!larkAuth.isConnected ? "Connect your Lark account in Settings first" : "Export to Lark"}
+                className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+                Export to Lark
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -482,6 +500,16 @@ export default function SessionPage() {
             : "An error occurred while exporting. Please try again."
         }
         onClose={() => setExportStatus({ isOpen: false, status: "loading", format: null })}
+      />
+
+      {/* Lark export modal */}
+      <LarkExportModal
+        isOpen={isLarkExportOpen}
+        onClose={() => setIsLarkExportOpen(false)}
+        projectId={projectId}
+        sessionId={sessionId}
+        projectName={session?.project?.name || "Project"}
+        sessionTitle={session?.title || "Feedback Session"}
       />
     </div>
   );
