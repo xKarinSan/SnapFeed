@@ -113,9 +113,13 @@ export interface LarkBlock {
   };
   divider?: Record<string, never>;
   image?: {
-    token: string;
+    file_token: string;
     width?: number;
     height?: number;
+  };
+  // For updating image blocks
+  replace_image?: {
+    token: string;
   };
 }
 

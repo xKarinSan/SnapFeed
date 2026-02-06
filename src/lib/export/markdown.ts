@@ -18,7 +18,7 @@ interface ExportFeedback {
 
 export interface ExportData {
   projectName: string;
-  url: string;
+  url: string | null;
   feedbacks: ExportFeedback[];
   screenshots: ExportScreenshot[];
 }
